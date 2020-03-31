@@ -1,5 +1,5 @@
 from ..function import F
-from ..query import Query, SimpleWhereClause, GroupWhereClause
+from ..query import Query, SimpleBooleanClause, GroupBooleanClause
 from ..errors import CompilationError
 from ..table import Column, Table
 
@@ -137,8 +137,8 @@ class Dialect:
         list of conditions
 
         Args:
-            wheres (Query|list): Query or list of SimpleWhereClause
-                and GroupWhereClause
+            wheres (Query|list): Query or list of SimpleBooleanClause
+                and GroupBooleanClause
         
         Returns:
             str
@@ -149,9 +149,9 @@ class Dialect:
             wheres = wheres._where
 
         for where in wheres:
-            if isinstance(where, SimpleWhereClause):
+            if isinstance(where, SimpleBooleanClause):
                 compiled_where = self.compile_simple_where(where)
-            elif isinstance(where, GroupWhereClause):
+            elif isinstance(where, GroupBooleanClause):
                 compiled_where = self.compile_group_where(where)
 
             compiled_str = f"{compiled_str} {compiled_where}"
@@ -172,10 +172,10 @@ class Dialect:
 
     def compile_simple_where(self, where):
         """
-        Compile a SimpleWhereClause
+        Compile a SimpleBooleanClause
 
         Args:
-            where (SimpleWhereClause):
+            where (SimpleBooleanClause):
         
         Returns:
             str
@@ -216,10 +216,10 @@ class Dialect:
 
     def compile_group_where(self, where):
         """
-        Compiles a GroupWhereClause
+        Compiles a GroupBooleanClause
 
         Args:
-            where (GroupWhereClause):
+            where (GroupBooleanClause):
         
         Returns:
             str

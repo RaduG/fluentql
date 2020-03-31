@@ -40,7 +40,7 @@ class Operators:
     NOT_REGEXP = "not regexp"
 
 
-class WhereClause:
+class BooleanClause:
     def __init__(self, column, op=None, value=None, boolean=None):
         """
         Args:
@@ -65,7 +65,7 @@ class WhereClause:
         self._boolean = value
 
 
-class SimpleWhereClause(WhereClause):
+class SimpleBooleanClause(BooleanClause):
     def __init__(self, column, op=None, value=None, boolean=None):
         """
         Args:
@@ -81,7 +81,7 @@ class SimpleWhereClause(WhereClause):
         self._value = value
 
 
-class GroupWhereClause(WhereClause):
+class GroupBooleanClause(BooleanClause):
     def __init__(self, group, boolean=None):
         """
         Args:
@@ -200,7 +200,7 @@ class Query:
         if isinstance(column, (Column, F)):
             assert op is not None and value is not None, "Op and value cannot be None"
 
-            where_clause = SimpleWhereClause(column, op, value)
+            where_clause = SimpleBooleanClause(column, op, value)
 
         elif isinstance(column, FunctionType):
             where_group = self._sub_query(InheritedTarget)
@@ -211,7 +211,7 @@ class Query:
             # object to be mutated
             column(where_group)
 
-            where_clause = GroupWhereClause(where_group)
+            where_clause = GroupBooleanClause(where_group)
 
         else:
             raise QueryBuilderError(f"Unknown argument type for column: {type(column)}")
