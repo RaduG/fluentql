@@ -26,18 +26,18 @@ class Column:
             Column self
         """
         self.table = table
+        return self
 
 
 class Table:
     __columns__ = None
-    __tablename__ = None
 
-    def __init__(self, table_name):
+    def __init__(self, name):
         """
         Args:
-            table_name (str): Name of the table
+            name (str): Name of the table
         """
-        self.__tablename__ = table_name
+        self.name = name
 
     def column(self, name):
         """

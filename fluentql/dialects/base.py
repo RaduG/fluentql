@@ -1,6 +1,7 @@
 from ..function import F
 from ..query import Query, SimpleWhereClause, GroupWhereClause
 from ..errors import CompilationError
+from ..table import Column, Table
 
 
 class Keywords:
@@ -50,14 +51,16 @@ class Dialect:
             str
         """
         columns = self.compile_target_columns(query._select)
-        where = None
         from_ = self.compile_from(query._target)
+
+        q = f"{self.keywords.SELECT} {columns} {from_}"
 
         # Compile Where if it exists
         if query._where is not None:
             where = self.compile_where(query._where)
+            q = f"{q} {where}"
 
-        return f"{self.keywords.SELECT} {columns} {from_} {where}"
+        return q
 
     def compile_target_columns(self, columns):
         """
@@ -69,6 +72,10 @@ class Dialect:
         Returns:
             str
         """
+        # Select all
+        if len(columns) == 0:
+            return self.keywords.ALL
+
         return self.keywords.LIST_SEPARATOR.join(
             self.compile_target_column(column) for column in columns
         )
@@ -78,16 +85,13 @@ class Dialect:
         Compile a target column
 
         Args:
-            column (str|F|tuple(str|F, str)):
+            column (Column|F|tuple(Column|F, str)):
         
         Returns:
             str
         """
-        if isinstance(column, str):
-            if column == "*":
-                return self.keywords.ALL
-
-            return column
+        if isinstance(column, Column):
+            return column.name
 
         if isinstance(column, F):
             return self.compile_function(column)
@@ -185,6 +189,8 @@ class Dialect:
             sub_query = self.compile(where._value, False)
 
             value = f"({sub_query})"
+        elif isinstance(where._value, Column):
+            value = self.compile_target_column(where._value)
         else:
             value = self.compile_value(where._value)
 
@@ -262,7 +268,12 @@ class Dialect:
         args = function.args
 
         compiled_args = self.keywords.LIST_SEPARATOR.join(
-            [self.compile_value(arg) for arg in args]
+            [
+                self.compile_target_column(arg)
+                if isinstance(arg, Column)
+                else self.compile_value(arg)
+                for arg in args
+            ]
         )
 
         return f"{function_name}({compiled_args})"
