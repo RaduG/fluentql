@@ -1,4 +1,3 @@
-from collections import namedtuple
 from enum import Enum
 from types import FunctionType
 
@@ -6,15 +5,15 @@ from .errors import QueryBuilderError
 
 
 class QueryTypes(Enum):
-    SELECT = 0
-    INSERT = 1
-    UPDATE = 2
-    DELETE = 3
-    CREATE = 4
-    DROP = 5
+    SELECT = "select"
+    INSERT = "insert"
+    UPDATE = "update"
+    DELETE = "delete"
+    CREATE = "create"
+    DROP = "drop"
 
-    # Subtypes for nested queries
-    WHERE = 6
+    # Specific types for nested queries
+    WHERE = "where"
 
 
 class Operators:
@@ -133,8 +132,8 @@ class Query:
         Initialise a select query with a list of columns.
 
         Args:
-            columns (list(str|tuple(str, str))): Iterable of column names
-                to select. Each element can either be a string, or a 2-tuple
+            columns (list(str|QueryFunction|tuple(str, str))): Iterable of column names
+                to select. Each element can either be a string, a QueryFunction, or a 2-tuple
                 where the first element is the original column name and the second
                 is an alias. Defaults to ('*'), which means all columns will be
                 selected.
@@ -151,7 +150,7 @@ class Query:
 
         # Validate columns argument
         assert all(
-            isinstance(c, str)
+            isinstance(c, (str, QueryFunction))
             or (len(c) == 2 and isinstance(c[0], str) and isinstance(c[1], str))
             for c in columns
         ), "Invalid argument for columns"
@@ -239,14 +238,14 @@ class Query:
         """
         Alias for where(column, op, value, boolean="or")
 
-        column (str|QueryFunction|callable): 
+        column (str|QueryFunction|callable):
             - If a str is given, it should contain the name of the column
-            to compare and op and value are also required. 
+            to compare and op and value are also required.
             - If a QueryFunction is given, the transformation is to be applied
             as defined in the QueryFunction itself, and op and value are
             also required.
-            - If a callable is given, it should take a query object as its 
-            first positional argument, and it assumes that the user wants to 
+            - If a callable is given, it should take a query object as its
+            first positional argument, and it assumes that the user wants to
             build a nested where clause group.
         op (str): Operator to use. Required if column is a str or a QueryFunction.
             Defaults to None.
@@ -263,7 +262,7 @@ class Query:
 
         Args:
             target (object):
-        
+
         Returns:
             Query
         """
