@@ -1,4 +1,5 @@
-from ..query import Query, QueryFunction, SimpleWhereClause, GroupWhereClause
+from ..function import F
+from ..query import Query, SimpleWhereClause, GroupWhereClause
 from ..errors import CompilationError
 
 
@@ -63,7 +64,7 @@ class Dialect:
         Compile a list of column targets
 
         Args:
-            columns (list(str|QueryFunction|tuple(str, str))): 
+            columns (list(str|F|tuple(str, str))): 
         
         Returns:
             str
@@ -77,7 +78,7 @@ class Dialect:
         Compile a target column
 
         Args:
-            column (str|QueryFunction|tuple(str|QueryFunction, str)):
+            column (str|F|tuple(str|F, str)):
         
         Returns:
             str
@@ -88,7 +89,7 @@ class Dialect:
 
             return column
 
-        if isinstance(column, QueryFunction):
+        if isinstance(column, F):
             return self.compile_function(column)
 
         # Alias
@@ -97,10 +98,10 @@ class Dialect:
 
     def compile_function(self, function):
         """
-        Compile a QueryFunction
+        Compile a F
 
         Args:
-            function (QueryFunction):
+            function (F):
         
         Returns:
             str
@@ -185,15 +186,27 @@ class Dialect:
 
             value = f"({sub_query})"
         else:
-            value_type = type(where._value).__name__
-            method_name = f"compile_{value_type}_value"
-
-            try:
-                value = getattr(self, method_name)(where._value)
-            except AttributeError:
-                value = self.compile_generic_value(where._value)
+            value = self.compile_value(where._value)
 
         return f"{column} {op} {value}"
+
+    def compile_value(self, value):
+        """
+        Compiles a constant value to a string
+
+        Args:
+            value (object):
+        
+        Returns:
+            str
+        """
+        value_type = type(value).__name__
+        method_name = f"compile_{value_type}_value"
+
+        try:
+            return getattr(self, method_name)(value)
+        except AttributeError:
+            return self.compile_generic_value(value)
 
     def compile_group_where(self, where):
         """
@@ -234,3 +247,22 @@ class Dialect:
             str
         """
         return str(val)
+
+    def compile_generic_func(self, function):
+        """
+        Last resort compile method for functions
+
+        Args:
+            function (F):
+        
+        Returns:
+            str
+        """
+        function_name = function.name
+        args = function.args
+
+        compiled_args = self.keywords.LIST_SEPARATOR.join(
+            [self.compile_value(arg) for arg in args]
+        )
+
+        return f"{function_name}({compiled_args})"

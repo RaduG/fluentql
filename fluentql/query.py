@@ -2,6 +2,7 @@ from enum import Enum
 from types import FunctionType
 
 from .errors import QueryBuilderError
+from .function import F
 
 
 class QueryTypes(Enum):
@@ -66,7 +67,7 @@ class SimpleWhereClause(WhereClause):
     def __init__(self, column, op=None, value=None, boolean=None):
         """
         Args:
-            column (str|QueryFunction|Query):
+            column (str|F|Query):
             op (str): Defaults to None
             value (object): Defaults to None
             boolean (str): Defaults to None
@@ -88,10 +89,6 @@ class GroupWhereClause(WhereClause):
         super().__init__(boolean)
 
         self._group = group
-
-
-class QueryFunction:
-    pass
 
 
 class InheritedTarget:
@@ -132,8 +129,8 @@ class Query:
         Initialise a select query with a list of columns.
 
         Args:
-            columns (list(str|QueryFunction|tuple(str, str))): Iterable of column names
-                to select. Each element can either be a string, a QueryFunction, or a 2-tuple
+            columns (list(str|F|tuple(str, str))): Iterable of column names
+                to select. Each element can either be a string, a F, or a 2-tuple
                 where the first element is the original column name and the second
                 is an alias. Defaults to ('*'), which means all columns will be
                 selected.
@@ -150,7 +147,7 @@ class Query:
 
         # Validate columns argument
         assert all(
-            isinstance(c, (str, QueryFunction))
+            isinstance(c, (str, F))
             or (len(c) == 2 and isinstance(c[0], str) and isinstance(c[1], str))
             for c in columns
         ), "Invalid argument for columns"
@@ -165,16 +162,16 @@ class Query:
         Add a where clause to a query.
 
         Args:
-            column (str|QueryFunction|callable):
+            column (str|F|callable):
                 - If a str is given, it should contain the name of the column
                 to compare and op and value are also required.
-                - If a QueryFunction is given, the transformation is to be applied
-                as defined in the QueryFunction itself, and op and value are
+                - If a F is given, the transformation is to be applied
+                as defined in the F itself, and op and value are
                 also required.
                 - If a callable is given, it should take a query object as its
                 first positional argument, and it assumes that the user wants to
                 build a nested where clause group.
-            op (str): Operator to use. Required if column is a str or a QueryFunction.
+            op (str): Operator to use. Required if column is a str or a F.
                 Defaults to None.
             value (object): Value to compare against. If a Query object is given,
                 that query will be treated as a sub-query. Otherwise, it can be
@@ -186,7 +183,7 @@ class Query:
         Returns:
             Query self
         """
-        if isinstance(column, (str, QueryFunction)):
+        if isinstance(column, (str, F)):
             assert op is not None and value is not None, "Op and value cannot be None"
 
             where_clause = SimpleWhereClause(column, op, value)
@@ -216,16 +213,16 @@ class Query:
         """
         Alias for where(column, op, value, boolean="and").
 
-        column (str|QueryFunction|callable):
+        column (str|F|callable):
             - If a str is given, it should contain the name of the column
             to compare and op and value are also required.
-            - If a QueryFunction is given, the transformation is to be applied
-            as defined in the QueryFunction itself, and op and value are
+            - If a F is given, the transformation is to be applied
+            as defined in the F itself, and op and value are
             also required.
             - If a callable is given, it should take a query object as its
             first positional argument, and it assumes that the user wants to
             build a nested where clause group.
-        op (str): Operator to use. Required if column is a str or a QueryFunction.
+        op (str): Operator to use. Required if column is a str or a F.
             Defaults to None.
         value (object): Value to compare against. Can be any object that can be
             formatted to a string. The dialect used to construct the query
@@ -238,16 +235,16 @@ class Query:
         """
         Alias for where(column, op, value, boolean="or")
 
-        column (str|QueryFunction|callable):
+        column (str|F|callable):
             - If a str is given, it should contain the name of the column
             to compare and op and value are also required.
-            - If a QueryFunction is given, the transformation is to be applied
-            as defined in the QueryFunction itself, and op and value are
+            - If a F is given, the transformation is to be applied
+            as defined in the F itself, and op and value are
             also required.
             - If a callable is given, it should take a query object as its
             first positional argument, and it assumes that the user wants to
             build a nested where clause group.
-        op (str): Operator to use. Required if column is a str or a QueryFunction.
+        op (str): Operator to use. Required if column is a str or a F.
             Defaults to None.
         value (object): Value to compare against. Can be any object that can be
             formatted to a string. The dialect used to construct the query
