@@ -82,7 +82,7 @@ class GroupWhereClause(WhereClause):
     def __init__(self, group, boolean=None):
         """
         Args:
-            group (list(WhereClause)): 
+            group (Query):
             boolean (str): Defaults to None
         """
         super().__init__(boolean)
@@ -137,7 +137,7 @@ class Query:
                 where the first element is the original column name and the second
                 is an alias. Defaults to ('*'), which means all columns will be
                 selected.
-        
+
         Returns:
             Query self
         """
@@ -216,14 +216,14 @@ class Query:
         """
         Alias for where(column, op, value, boolean="and").
 
-        column (str|QueryFunction|callable): 
+        column (str|QueryFunction|callable):
             - If a str is given, it should contain the name of the column
-            to compare and op and value are also required. 
+            to compare and op and value are also required.
             - If a QueryFunction is given, the transformation is to be applied
             as defined in the QueryFunction itself, and op and value are
             also required.
-            - If a callable is given, it should take a query object as its 
-            first positional argument, and it assumes that the user wants to 
+            - If a callable is given, it should take a query object as its
+            first positional argument, and it assumes that the user wants to
             build a nested where clause group.
         op (str): Operator to use. Required if column is a str or a QueryFunction.
             Defaults to None.

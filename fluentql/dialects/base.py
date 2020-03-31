@@ -54,7 +54,7 @@ class Dialect:
 
         # Compile Where if it exists
         if query._where is not None:
-            where = self.compile_wheres(query._where)
+            where = self.compile_where(query._where)
 
         return f"{self.keywords.SELECT} {columns} {from_} {where}"
 
@@ -126,17 +126,22 @@ class Dialect:
         """
         return f"{self.keywords.FROM} {target.name}"
 
-    def compile_wheres(self, wheres):
+    def compile_where(self, wheres):
         """
-        Compile a where clause made of a list of conditions
+        Compile a where query or a where clause made of a
+        list of conditions
 
         Args:
-            wheres (list): List of SimpleWhereClause and GroupWhereClause
+            wheres (Query|list): Query or list of SimpleWhereClause
+                and GroupWhereClause
         
         Returns:
             str
         """
         compiled_str = ""
+
+        if isinstance(wheres, Query):
+            wheres = wheres._where
 
         for where in wheres:
             if isinstance(where, SimpleWhereClause):
@@ -189,6 +194,20 @@ class Dialect:
                 value = self.compile_generic_value(where._value)
 
         return f"{column} {op} {value}"
+
+    def compile_group_where(self, where):
+        """
+        Compiles a GroupWhereClause
+
+        Args:
+            where (GroupWhereClause):
+        
+        Returns:
+            str
+        """
+        group_query = self.compile(where._group, False)
+
+        return f"({group_query})"
 
     def compile_operator(self, op):
         """
