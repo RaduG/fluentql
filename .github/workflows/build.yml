@@ -6,6 +6,7 @@ on:
       - develop
       - master
     paths:
+      - '.github/**'
       - 'fluentql/**'
       - 'tests/**'
       - 'setup.py'
