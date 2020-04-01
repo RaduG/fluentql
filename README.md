@@ -1,7 +1,14 @@
+## Status
+
+**PLEASE NOTE THAT THIS IS A WORK IN PROGRESS PROJECT THAT HAS NOT YET BEEN RELEASED TO PYPI.**
+
+|                                            Build                                             |                                                                         Coverage                                                                         | Release |
+| :------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------: | :-----: |
+| ![Build#develop](https://github.com/RaduG/fluentql/workflows/build/badge.svg?branch=develop) | [![Coverage Status](https://coveralls.io/repos/github/RaduG/fluentql/badge.svg?branch=master)](https://coveralls.io/github/RaduG/fluentql?branch=master) |   N/A   |
+
 ## Introduction
 
-> PLEASE NOTE THAT THIS IS A WORK IN PROGRESS PROJECT THAT HAS NOT YET BEEN RELEASED TO PYPI.
-
+> 
 FluentQL is a lightweight, fast and intuitive Python SQL query builder. It helps you build cross-dialect queries straight in your code, as well as test and validate your queries.
 
 Using SqlAlchemy and Pandas? FluentQL seamlessly integrates with your existing codebase, providing type checking capabilities out of the box.
