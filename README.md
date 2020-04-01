@@ -87,11 +87,11 @@ The table name and schema are automatically copied from the model class.
 
 #### Basic
 ```python
-from fluentql import Query, Table
+from fluentql import Q, Table
 
 
 books = Table("books")
-Query(books).select()
+Q.select().from_(books)
 ```
 Compiles to:
 ```sql
@@ -104,7 +104,7 @@ By default, as seen in the previous example, calling select() without arguments 
 To select specific columns:
 
 ```python
-Query(books).select([books["id"], books["title"]])
+Q.select([books["id"], books["title"]]).from_(books)
 ```
 Compiles to:
 ```sql
@@ -112,7 +112,7 @@ select id, title from books;
 ```
 #### Aliases
 ```python
-Query(books).select([books["id"], (books["title"], "book_title")])
+Q.select([books["id"], (books["title"], "book_title")]).from_(books)
 ```
 Compiles to:
 ```sql
