@@ -340,12 +340,12 @@ class Dialect:
         elif join_type == "cross":
             join_type_str = self._get_keyword("CROSS_JOIN")
         else:
-            raise ValueError(f"Join type invalid: {join_type}")
+            raise CompilationError(f"Join type invalid: {join_type}")
 
         compiled_join = f"{join_type_str} {join_target.name}"
 
         if join._on is not None and join._using is not None:
-            raise ValueError("Cannot have both USING and ON in a JOIN")
+            raise CompilationError("Cannot have both USING and ON in a JOIN")
 
         if join._on is not None:
             compiled_ons = self.compile_on(join._on)
