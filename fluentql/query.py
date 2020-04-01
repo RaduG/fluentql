@@ -198,12 +198,7 @@ class Query:
         Returns:
             Query self
         """
-        if isinstance(column, (Column, F)):
-            assert op is not None and value is not None, "Op and value cannot be None"
-
-            where_clause = SimpleBooleanClause(column, op, value)
-
-        elif isinstance(column, FunctionType):
+        if isinstance(column, FunctionType):
             where_group = self._sub_query(QueryCommands.WHERE)
             # Inherit targets
             where_group._target = list(self._target)
@@ -214,9 +209,10 @@ class Query:
             column(where_group)
 
             where_clause = GroupBooleanClause(where_group)
-
         else:
-            raise QueryBuilderError(f"Unknown argument type for column: {type(column)}")
+            assert op is not None and value is not None, "Op and value cannot be None"
+
+            where_clause = SimpleBooleanClause(column, op, value)
 
         if self._where is None:
             self._where = []

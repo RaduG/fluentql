@@ -15,6 +15,7 @@ class Keywords:
     OR = "or"
     QUERY_END = ";"
     USING = "using"
+    STRING_QUOTE = "'"
 
     LEFT_JOIN = "left join"
     RIGHT_JOIN = "right join"
@@ -41,7 +42,7 @@ class Dialect:
         - break_line_on_sections: bool
         - indent: bool
         """
-        self._options.update(options)
+        self._options = {**self._options, **options}
 
     def compile(self, query, terminal_query=True):
         """
@@ -74,6 +75,10 @@ class Dialect:
         Returns:
             str
         """
+        # If there is no target for the select query, need to raise an error
+        if query._target is None or len(query._target) == 0:
+            raise CompilationError("Select query must have a target")
+
         columns = self.compile_target_columns(query._select)
         from_ = self.compile_from(query._target[0])
 
@@ -181,7 +186,9 @@ class Dialect:
         Returns:
             str
         """
-        if isinstance(wheres, Query):
+        # We need this later on
+        is_query = isinstance(wheres, Query)
+        if is_query:
             wheres = wheres._where
 
         compiled_wheres = []
@@ -207,6 +214,13 @@ class Dialect:
             compiled_wheres.append(compiled_where)
 
         compiled_wheres_str = " ".join(compiled_wheres)
+
+        # TODO: proper fix for this issue
+        # If the original argument was a Query, then we don't need to
+        # add the keyword because it means it's a sub clause in a where
+        if is_query:
+            return compiled_wheres_str
+
         return f"{self._get_keyword('WHERE')} {compiled_wheres_str}"
 
     def compile_on(self, ons):
@@ -382,6 +396,21 @@ class Dialect:
         """
         return op
 
+    def compile_str_value(self, val):
+        """
+        Compile a string value. Generally, strings should be
+        wrapped between some form of quote.
+
+        Args:
+            val (str):
+        
+        Returns:
+            str
+        """
+        quote_char = self._get_keyword("STRING_QUOTE")
+
+        return f"{quote_char}{val}{quote_char}"
+
     def compile_generic_value(self, val):
         """
         Calls str() on given value object
@@ -430,7 +459,7 @@ class Dialect:
         """
         keyword = getattr(self.keywords, name)
 
-        if "keywords_caps" in self._options:
+        if self._options.get("keywords_caps", False):
             keyword = keyword.upper()
 
         return keyword
