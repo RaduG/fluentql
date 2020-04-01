@@ -32,12 +32,14 @@ class Column:
 class Table:
     __columns__ = None
 
-    def __init__(self, name):
+    def __init__(self, name, db=None):
         """
         Args:
             name (str): Name of the table
+            db (str): Name of the target database, optional
         """
         self.name = name
+        self.db = db
 
     def column(self, name):
         """
@@ -58,6 +60,13 @@ class Table:
             return Column(name).bind(self)
 
         return self.__columns__[name]
+
+    @property
+    def qualname(self):
+        if self.db is None:
+            return self.name
+
+        return f"{self.db}.{self.name}"
 
     def __getitem__(self, name):
         """

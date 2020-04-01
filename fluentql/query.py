@@ -41,7 +41,7 @@ class Operators:
 
 
 class BooleanClause:
-    def __init__(self, column, op=None, value=None, boolean=None):
+    def __init__(self, boolean=None):
         """
         Args:
             boolean (str): Defaults to None
@@ -66,19 +66,19 @@ class BooleanClause:
 
 
 class SimpleBooleanClause(BooleanClause):
-    def __init__(self, column, op=None, value=None, boolean=None):
+    def __init__(self, left, op=None, right=None, boolean=None):
         """
         Args:
-            column (str|F|Query):
+            left (str|F|Query):
             op (str): Defaults to None
-            value (object): Defaults to None
+            right (object): Defaults to None
             boolean (str): Defaults to None
         """
         super().__init__(boolean)
 
-        self._column = column
+        self._left = left
         self._op = op
-        self._value = value
+        self._right = right
 
 
 class GroupBooleanClause(BooleanClause):
@@ -110,6 +110,7 @@ class Query:
         self._drop = None
         self._select = None
         self._join = None
+        self._on = None
         self._where = None
         self._group_by = None
         self._having = None
@@ -297,11 +298,11 @@ class Query:
             on(on_query)
 
         # Set type of join in on query
-        on.set_option("join_type", how)
+        on_query.set_option("join_type", how)
 
         if self._join is None:
             self._join = []
-        self._join.append(on)
+        self._join.append(on_query)
 
         return self
 
@@ -376,6 +377,81 @@ class Query:
             Query self
         """
         return self.join(target, None, how="cross")
+
+    def on(self, left, op=None, right=None, boolean="and"):
+        """
+        On clause for a join. Only available for ON command
+        subqueries.
+
+        Args:
+            left (Column|F|callable|object): Left hand side of the boolean
+                expression. Can be a Column, a Function or a constant.
+            op (str): Operator to use.
+            right (Column|F|object): Right hand side of the boolean expression.
+                Can be a Column, a Function or a constant.
+        
+        Returns:
+            Query self
+        """
+        if self._command is not QueryCommands.ON:
+            raise QueryBuilderError(".on should be called only in ON subqueries")
+
+        if isinstance(left, FunctionType):
+            on_group = self._sub_query(QueryCommands.ON)
+
+            # Inherit targets
+            on_group._target = list(self._target)
+
+            # Call the user function
+            left(on_group)
+
+            on_clause = GroupBooleanClause(on_group)
+
+        else:
+            assert op is not None and right is not None, "Op and value cannot be None"
+            on_clause = SimpleBooleanClause(left, op, right)
+
+        if self._on is None:
+            self._on = []
+        else:
+            # Set last on clause's boolean
+            self._on[-1].boolean = boolean
+
+        self._on.append(on_clause)
+
+        return self
+
+    def and_on(self, left, op=None, right=None):
+        """
+        Alias for on(left, op, right, boolean="and")
+
+        Args:
+            left (Column|F|callable|object): Left hand side of the boolean
+                expression. Can be a Column, a Function or a constant.
+            op (str): Operator to use.
+            right (Column|F|object): Right hand side of the boolean expression.
+                Can be a Column, a Function or a constant.
+        
+        Returns:
+            Query self
+        """
+        return self.on(left, op, right, boolean="and")
+
+    def or_on(self, left, op=None, right=None):
+        """
+        Alias for on(left, op, right, boolean="or")
+
+        Args:
+            left (Column|F|callable|object): Left hand side of the boolean
+                expression. Can be a Column, a Function or a constant.
+            op (str): Operator to use.
+            right (Column|F|object): Right hand side of the boolean expression.
+                Can be a Column, a Function or a constant.
+        
+        Returns:
+            Query self
+        """
+        return self.on(left, op, right, boolean="or")
 
     def set_option(self, key, value):
         """
