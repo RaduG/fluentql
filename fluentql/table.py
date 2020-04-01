@@ -61,6 +61,17 @@ class Table:
 
         return self.__columns__[name]
 
+    def all(self):
+        """
+        To be used when all the columns in a table need to be referenced.
+        This returns an instance of Column named "*" bound to the table,
+        which when compiled yields tablename.*
+
+        Returns:
+            Column
+        """
+        return Column("*").bind(self)
+
     @property
     def qualname(self):
         if self.db is None:

@@ -114,7 +114,7 @@ class Dialect:
         if len(columns) == 0:
             return self._get_keyword("ALL")
 
-        return self._get_keyword("LIST_SEPARATOR").join(
+        return f"{self._get_keyword('LIST_SEPARATOR')} ".join(
             self.compile_target_column(column) for column in columns
         )
 
@@ -129,7 +129,7 @@ class Dialect:
             str
         """
         if isinstance(column, Column):
-            return column.name
+            return f"{column.table.name}.{column.name}"
 
         if isinstance(column, F):
             return self.compile_function(column)
