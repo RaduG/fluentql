@@ -32,8 +32,8 @@ class Dialect:
         Returns:
             str
         """
-        query_type = query._type.value
-        compiled_query = getattr(self, f"compile_{query_type}")(query)
+        command = query._command.value
+        compiled_query = getattr(self, f"compile_{command}")(query)
 
         if terminal_query:
             compiled_query = f"{compiled_query}{self.keywords.QUERY_END}"
@@ -51,7 +51,7 @@ class Dialect:
             str
         """
         columns = self.compile_target_columns(query._select)
-        from_ = self.compile_from(query._target)
+        from_ = self.compile_from(query._target[0])
 
         q = f"{self.keywords.SELECT} {columns} {from_}"
 

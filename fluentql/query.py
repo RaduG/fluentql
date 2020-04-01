@@ -6,7 +6,7 @@ from .function import F
 from .table import Column
 
 
-class QueryTypes(Enum):
+class QueryCommands(Enum):
     SELECT = "select"
     INSERT = "insert"
     UPDATE = "update"
@@ -93,37 +93,22 @@ class GroupBooleanClause(BooleanClause):
         self._group = group
 
 
-class Target:
-    pass
-
-
-class InheritedTarget(Target):
-    pass
-
-
-class GroupTarget(Target):
-    def __init__(self, *targets):
-        self.targets = targets
-
-
 class Query:
-    def __init__(self, target):
+    def __init__(self, command):
         """
         Args:
-            target (Table): Main Table targeted by query
+            command (QueryCommands): Query command type
         """
-        self._target = target
-
-        # Initialise query type
-        self._type = None
+        # Initialise query command
+        self._command = command
 
         # Initialise query sections
+        self._target = []
         self._create = None
         self._update = None
         self._delete = None
         self._drop = None
         self._select = None
-        # self._from = None -- this should be target
         self._join = None
         self._where = None
         self._group_by = None
@@ -135,7 +120,8 @@ class Query:
         # Options
         self._options = {}
 
-    def select(self, columns=None):
+    @classmethod
+    def select(cls, columns=None):
         """
         Initialise a select query with a list of columns.
 
@@ -147,27 +133,39 @@ class Query:
                 selected.
 
         Returns:
-            Query self
+            Query instance
         """
-        if self._type is not None:
-            raise QueryBuilderError(
-                "Select columns already defined or select clause not compatible with statement."
-            )
-        if self._select is not None:
-            raise QueryBuilderError("Select columns already defined")
+        query = cls(QueryCommands.SELECT)
 
         if columns is None:
             columns = []
+        else:
+            # Validate columns argument
+            assert all(
+                isinstance(c, (Column, F))
+                or (len(c) == 2 and isinstance(c[0], Column) and isinstance(c[1], str))
+                for c in columns
+            ), "Invalid argument for columns"
 
-        # Validate columns argument
-        assert all(
-            isinstance(c, (Column, F))
-            or (len(c) == 2 and isinstance(c[0], Column) and isinstance(c[1], str))
-            for c in columns
-        ), "Invalid argument for columns"
+        query._select = tuple(columns)
 
-        self._type = QueryTypes.SELECT
-        self._select = tuple(columns)
+        return query
+
+    def from_(self, target):
+        """
+        Set main target for the query. The list of targets must
+        be empty.
+
+        Args:
+            target (Table): Query target
+        
+        Returns:
+            Query self
+        """
+        if len(self._target) > 0:
+            raise QueryBuilderError("Query target already set")
+
+        self._target.append(target)
 
         return self
 
@@ -203,8 +201,9 @@ class Query:
             where_clause = SimpleBooleanClause(column, op, value)
 
         elif isinstance(column, FunctionType):
-            where_group = self._sub_query(InheritedTarget)
-            where_group._type = QueryTypes.WHERE
+            where_group = self._sub_query(QueryCommands.WHERE)
+            # Inherit targets
+            where_group._target = list(self._target)
 
             # Call user function, which may or may not return a Query
             # but that doesn't matter as we expect the given query
@@ -275,7 +274,7 @@ class Query:
         Add a join clause to a query
 
         Args:
-            target (object):
+            target (Table):
             on (None|FunctionType): A callable that takes a query object
                 as its first positional argument, allowing the user to use
                 on, and_on and or_on methods. If None is given, the join will
@@ -285,8 +284,11 @@ class Query:
         Returns:
             Query self
         """
-        on_query = self._sub_query(GroupTarget(self._target, target))
-        on_query._type = QueryTypes.ON
+        # Add target to query
+        self._target.append(target)
+
+        on_query = self._sub_query(QueryCommands.ON)
+        on_query._target = list(self._target)
 
         if on is None:
             how = "cross"
@@ -308,7 +310,7 @@ class Query:
         Alias for join(target, on, how="left")
 
         Args:
-            target (object):
+            target (Table):
             on (FunctionType): A callable that takes a query object
                 as its first positional argument, allowing the user to use
                 on, and_on and or_on methods.
@@ -323,7 +325,7 @@ class Query:
         Alias for join(target, on, how="right")
 
         Args:
-            target (object):
+            target (Table):
             on (FunctionType): A callable that takes a query object
                 as its first positional argument, allowing the user to use
                 on, and_on and or_on methods.
@@ -338,7 +340,7 @@ class Query:
         Alias for join(target, on, how="inner")
 
         Args:
-            target (object):
+            target (Table):
             on (FunctionType): A callable that takes a query object
                 as its first positional argument, allowing the user to use
                 on, and_on and or_on methods.
@@ -353,7 +355,7 @@ class Query:
         Alias for join(target, on, how="outer")
 
         Args:
-            target (object):
+            target (Table):
             on (FunctionType): A callable that takes a query object
                 as its first positional argument, allowing the user to use
                 on, and_on and or_on methods.
@@ -368,7 +370,7 @@ class Query:
         Alias for join(target, None, how="cross")
 
         Args:
-            target (object):
+            target (Table):
         
         Returns:
             Query self
@@ -410,14 +412,15 @@ class Query:
         """
         return self._options[key]
 
-    def _sub_query(self, target):
+    def _sub_query(self, command):
         """
-        Return a new Query object bound to a given target.
+        Return a new Query of a given command, to be used as a
+        subquery.
 
         Args:
-            target (object):
+            command (QueryCommands):
 
         Returns:
             Query
         """
-        return type(self)(target)
+        return type(self)(command)
