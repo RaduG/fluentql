@@ -2,9 +2,9 @@
 
 **PLEASE NOTE THAT THIS IS A WORK IN PROGRESS PROJECT THAT HAS NOT YET BEEN RELEASED TO PYPI.**
 
-|                                            Build                                             |                                                                         Coverage                                                                         | Release |
-| :------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------: | :-----: |
-| ![Build#develop](https://github.com/RaduG/fluentql/workflows/build/badge.svg?branch=develop) | [![Coverage Status](https://coveralls.io/repos/github/RaduG/fluentql/badge.svg?branch=master)](https://coveralls.io/github/RaduG/fluentql?branch=master) |   N/A   |
+|                                            Build                                            |                                                                         Coverage                                                                         | Release |
+| :-----------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------: | :-----: |
+| ![Build#develop](https://github.com/RaduG/fluentql/workflows/build/badge.svg?branch=master) | [![Coverage Status](https://coveralls.io/repos/github/RaduG/fluentql/badge.svg?branch=master)](https://coveralls.io/github/RaduG/fluentql?branch=master) |   N/A   |
 
 ## Introduction
 
