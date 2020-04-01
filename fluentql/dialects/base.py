@@ -72,7 +72,7 @@ class Dialect:
                 try:
                     compiled_join = getattr(self, method_name)(join)
                 except AttributeError:
-                    compiled_join = self.compile_join(join, join_type)
+                    compiled_join = self.compile_join(join)
 
                 q = f"{q} {compiled_join}"
 
@@ -164,18 +164,16 @@ class Dialect:
         Returns:
             str
         """
-        compiled_str = ""
-
         if isinstance(wheres, Query):
             wheres = wheres._where
+
+        compiled_wheres = []
 
         for where in wheres:
             if isinstance(where, SimpleBooleanClause):
                 compiled_where = self.compile_simple_boolean_clause(where)
             elif isinstance(where, GroupBooleanClause):
                 compiled_where = self.compile_group_boolean_clause(where)
-
-            compiled_str = f"{compiled_str} {compiled_where}"
 
             if where.boolean is not None:
                 given_boolean = where.boolean
@@ -187,9 +185,12 @@ class Dialect:
                 else:
                     raise CompilationError(f"Boolean {given_boolean} not supported")
 
-                compiled_str = f"{compiled_str} {boolean} "
+                compiled_where = f"{compiled_where} {boolean}"
 
-        return f"{self.keywords.WHERE} {compiled_str}"
+            compiled_wheres.append(compiled_where)
+
+        compiled_wheres_str = " ".join(compiled_wheres)
+        return f"{self.keywords.WHERE} {compiled_wheres_str}"
 
     def compile_on(self, ons):
         """
@@ -204,15 +205,13 @@ class Dialect:
         if isinstance(ons, Query):
             ons = ons._on
 
-        compiled_ons = ""
+        compiled_ons = []
 
         for on in ons:
             if isinstance(on, SimpleBooleanClause):
                 compiled_on = self.compile_simple_boolean_clause(on)
             elif isinstance(on, GroupBooleanClause):
                 compiled_on = self.compile_group_boolean_clause(on)
-
-            compiled_ons = f"{compiled_ons} {compiled_on}"
 
             if on.boolean is not None:
                 given_boolean = on.boolean
@@ -224,9 +223,11 @@ class Dialect:
                 else:
                     raise CompilationError(f"Boolean {given_boolean} not supported")
 
-                compiled_ons = f"{compiled_ons} {boolean} "
+                compiled_on = f"{compiled_on} {boolean}"
 
-        return compiled_ons
+            compiled_ons.append(compiled_on)
+
+        return " ".join(compiled_ons)
 
     def compile_simple_boolean_clause(self, clause):
         """
@@ -298,18 +299,18 @@ class Dialect:
 
         return f"({clause_query})"
 
-    def compile_join(self, join, join_type):
+    def compile_join(self, join):
         """
         Compile a join query
 
         Args:
             join (Query): join Query
-            join_type (str):
         
         Returns:
             str
         """
         join_target = join._target[-1]
+        join_type = join.get_option("join_type")
 
         if join_type == "inner":
             join_type_str = self.keywords.INNER_JOIN
@@ -371,7 +372,7 @@ class Dialect:
         function_name = function.name
         args = function.args
 
-        compiled_args = self.keywords.LIST_SEPARATOR.join(
+        compiled_args = f"{self.keywords.LIST_SEPARATOR} ".join(
             [
                 self.compile_target_column(arg)
                 if isinstance(arg, Column)

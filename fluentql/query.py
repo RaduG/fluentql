@@ -17,6 +17,7 @@ class QueryCommands(Enum):
     # Specific types for nested queries
     WHERE = "where"
     ON = "on"
+    JOIN = "join"
 
 
 class Operators:
@@ -288,21 +289,21 @@ class Query:
         # Add target to query
         self._target.append(target)
 
-        on_query = self._sub_query(QueryCommands.ON)
-        on_query._target = list(self._target)
+        join_query = self._sub_query(QueryCommands.JOIN)
+        join_query._target = list(self._target)
 
         if on is None:
             how = "cross"
         else:
             # Call user function
-            on(on_query)
+            on(join_query)
 
         # Set type of join in on query
-        on_query.set_option("join_type", how)
+        join_query.set_option("join_type", how)
 
         if self._join is None:
             self._join = []
-        self._join.append(on_query)
+        self._join.append(join_query)
 
         return self
 
@@ -393,8 +394,10 @@ class Query:
         Returns:
             Query self
         """
-        if self._command is not QueryCommands.ON:
-            raise QueryBuilderError(".on should be called only in ON subqueries")
+        if self._command not in (QueryCommands.JOIN, QueryCommands.ON):
+            raise QueryBuilderError(
+                ".on should be called only in JOIN or OR subqueries"
+            )
 
         if isinstance(left, FunctionType):
             on_group = self._sub_query(QueryCommands.ON)
