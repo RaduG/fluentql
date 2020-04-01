@@ -10,6 +10,7 @@ on:
       - 'fluentql/**'
       - 'tests/**'
       - 'setup.py'
+      - 'requirements*'
 jobs:
   build:
     runs-on: ubuntu-latest
