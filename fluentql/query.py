@@ -112,6 +112,7 @@ class Query:
         self._select = None
         self._join = None
         self._on = None
+        self._using = None
         self._where = None
         self._group_by = None
         self._having = None
@@ -455,6 +456,33 @@ class Query:
             Query self
         """
         return self.on(left, op, right, boolean="or")
+
+    def using(self, column_name):
+        """
+        Using clause for a join. Can only be used in a Join sub-query if
+        .on has not been used
+        
+        Args:
+            column_name (str): Column name to use for the join
+        
+        Returns:
+            Query self
+        """
+        if self._command is not QueryCommands.JOIN:
+            raise QueryBuilderError(".using can only be used on a JOIN query")
+
+        if self._using is not None:
+            raise QueryBuilderError(".using can only be used once for a join")
+
+        if self._on is not None:
+            raise QueryBuilderError(
+                ".using can only be used if an on clause was not defined for the join"
+            )
+
+        # TODO: Validate that the column actually exists
+        self._using = column_name
+
+        return self
 
     def set_option(self, key, value):
         """

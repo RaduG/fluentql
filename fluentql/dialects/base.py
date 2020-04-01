@@ -1,7 +1,7 @@
 from ..function import F
 from ..query import Query, SimpleBooleanClause, GroupBooleanClause
 from ..errors import CompilationError
-from ..table import Column, Table
+from ..table import Column
 
 
 class Keywords:
@@ -14,6 +14,7 @@ class Keywords:
     AND = "and"
     OR = "or"
     QUERY_END = ";"
+    USING = "using"
 
     LEFT_JOIN = "left join"
     RIGHT_JOIN = "right join"
@@ -25,6 +26,22 @@ class Keywords:
 
 class Dialect:
     keywords = Keywords
+    _options = {
+        "all_caps": False,
+        "keywords_caps": True,
+        "break_line_on_sections": True,
+        "indent": False,
+    }
+
+    def __init__(self, **options):
+        """
+        Options:
+        - all_caps: bool
+        - keywords_caps: bool
+        - break_line_on_sections: bool
+        - indent: bool
+        """
+        self._options.update(options)
 
     def compile(self, query, terminal_query=True):
         """
@@ -43,7 +60,7 @@ class Dialect:
         compiled_query = getattr(self, f"compile_{command}")(query)
 
         if terminal_query:
-            compiled_query = f"{compiled_query}{self.keywords.QUERY_END}"
+            compiled_query = f"{compiled_query}{self._get_keyword('QUERY_END')}"
 
         return compiled_query
 
@@ -60,7 +77,7 @@ class Dialect:
         columns = self.compile_target_columns(query._select)
         from_ = self.compile_from(query._target[0])
 
-        q = f"{self.keywords.SELECT} {columns} {from_}"
+        q = f"{self._get_keyword('SELECT')} {columns} {from_}"
 
         # Compile join if it exists
         if query._join is not None:
@@ -95,9 +112,9 @@ class Dialect:
         """
         # Select all
         if len(columns) == 0:
-            return self.keywords.ALL
+            return self._get_keyword("ALL")
 
-        return self.keywords.LIST_SEPARATOR.join(
+        return self._get_keyword("LIST_SEPARATOR").join(
             self.compile_target_column(column) for column in columns
         )
 
@@ -119,7 +136,7 @@ class Dialect:
 
         # Alias
         compiled_column = self.compile_target_column(column[0])
-        return f"{compiled_column} {self.keywords.AS} {column[1]}"
+        return f"{compiled_column} {self._get_keyword('AS')} {column[1]}"
 
     def compile_function(self, function):
         """
@@ -150,7 +167,7 @@ class Dialect:
         Returns:
             str
         """
-        return f"{self.keywords.FROM} {target.name}"
+        return f"{self._get_keyword('FROM')} {target.name}"
 
     def compile_where(self, wheres):
         """
@@ -179,9 +196,9 @@ class Dialect:
                 given_boolean = where.boolean
 
                 if given_boolean == "and":
-                    boolean = self.keywords.AND
+                    boolean = self._get_keyword("AND")
                 elif given_boolean == "or":
-                    boolean = self.keywords.OR
+                    boolean = self._get_keyword("OR")
                 else:
                     raise CompilationError(f"Boolean {given_boolean} not supported")
 
@@ -190,7 +207,7 @@ class Dialect:
             compiled_wheres.append(compiled_where)
 
         compiled_wheres_str = " ".join(compiled_wheres)
-        return f"{self.keywords.WHERE} {compiled_wheres_str}"
+        return f"{self._get_keyword('WHERE')} {compiled_wheres_str}"
 
     def compile_on(self, ons):
         """
@@ -217,9 +234,9 @@ class Dialect:
                 given_boolean = on.boolean
 
                 if given_boolean == "and":
-                    boolean = self.keywords.AND
+                    boolean = self._get_keyword("AND")
                 elif given_boolean == "or":
-                    boolean = self.keywords.OR
+                    boolean = self._get_keyword("OR")
                 else:
                     raise CompilationError(f"Boolean {given_boolean} not supported")
 
@@ -313,25 +330,43 @@ class Dialect:
         join_type = join.get_option("join_type")
 
         if join_type == "inner":
-            join_type_str = self.keywords.INNER_JOIN
+            join_type_str = self._get_keyword("INNER_JOIN")
         elif join_type == "outer":
-            join_type_str = self.keywords.OUTER_JOIN
+            join_type_str = self._get_keyword("OUTER_JOIN")
         elif join_type == "left":
-            join_type_str = self.keywords.LEFT_JOIN
+            join_type_str = self._get_keyword("LEFT_JOIN")
         elif join_type == "right":
-            join_type_str = self.keywords.RIGHT_JOIN
+            join_type_str = self._get_keyword("RIGHT_JOIN")
         elif join_type == "cross":
-            join_type_str = self.keywords.CROSS_JOIN
+            join_type_str = self._get_keyword("CROSS_JOIN")
         else:
             raise ValueError(f"Join type invalid: {join_type}")
 
         compiled_join = f"{join_type_str} {join_target.name}"
 
-        if len(join._on) > 0:
+        if join._on is not None and join._using is not None:
+            raise ValueError("Cannot have both USING and ON in a JOIN")
+
+        if join._on is not None:
             compiled_ons = self.compile_on(join._on)
-            compiled_join = f"{compiled_join} {self.keywords.ON} {compiled_ons}"
+            compiled_join = f"{compiled_join} {self._get_keyword('ON')} {compiled_ons}"
+        elif join._using is not None:
+            compiled_using = self.compile_using(join)
+            compiled_join = f"{compiled_join} {compiled_using}"
 
         return compiled_join
+
+    def compile_using(self, join):
+        """
+        Compile a using clause
+        
+        Args:
+            join (Query): Join sub-query
+        
+        Returns:
+            str
+        """
+        return f"{self._get_keyword('USING')} ({join._using})"
 
     def compile_operator(self, op):
         """
@@ -372,7 +407,7 @@ class Dialect:
         function_name = function.name
         args = function.args
 
-        compiled_args = f"{self.keywords.LIST_SEPARATOR} ".join(
+        compiled_args = f"{self._get_keyword('LIST_SEPARATOR')} ".join(
             [
                 self.compile_target_column(arg)
                 if isinstance(arg, Column)
@@ -382,3 +417,20 @@ class Dialect:
         )
 
         return f"{function_name}({compiled_args})"
+
+    def _get_keyword(self, name):
+        """
+        Get a keyword by name. Applies any relevant options to it.
+
+        Args:
+            name (str): Keyword name
+        
+        Returns:
+            str
+        """
+        keyword = getattr(self.keywords, name)
+
+        if "keywords_caps" in self._options:
+            keyword = keyword.upper()
+
+        return keyword
