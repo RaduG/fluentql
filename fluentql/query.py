@@ -172,6 +172,18 @@ class Query:
 
         return self
 
+    def set_from(self, target):
+        """
+        Alias for from_(target).
+
+        Args:
+            target (Table): Query target
+        
+        Returns:
+            Query self
+        """
+        return self.from_(target)
+
     def where(self, column, op=None, value=None, boolean="and"):
         """
         Add a where clause to a query.
