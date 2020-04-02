@@ -40,19 +40,19 @@ def test_select_star(table_a, dialect):
 
 
 def test_select_table_star(table_a, dialect):
-    q = Q.select([table_a.all()]).from_(table_a)
+    q = Q.select(table_a.all()).from_(table_a)
 
     assert dialect.compile(q) == "select table_a.* from table_a;"
 
 
 def test_column_selection(table_a, dialect):
-    q = Q.select([table_a["col1"], table_a["col2"]]).from_(table_a)
+    q = Q.select(table_a["col1"], table_a["col2"]).from_(table_a)
 
     assert dialect.compile(q) == "select table_a.col1, table_a.col2 from table_a;"
 
 
 def test_column_selection_alias(table_a, dialect):
-    q = Q.select([(table_a["col1"], "col1_alias")]).from_(table_a)
+    q = Q.select((table_a["col1"], "col1_alias")).from_(table_a)
 
     assert dialect.compile(q) == "select table_a.col1 as col1_alias from table_a;"
 
