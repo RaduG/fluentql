@@ -124,12 +124,12 @@ class Query:
         self._options = {}
 
     @classmethod
-    def select(cls, columns=None):
+    def select(cls, *columns):
         """
         Initialise a select query with a list of columns.
 
         Args:
-            columns (list(Column|F|tuple(Column, str))): Iterable of column names
+            *columns (Column|F|tuple(Column, str)): Columns
                 to select. Each element can either be a Column, an instance of F, 
                 or a 2-tuple where the first element is a Column object and the second
                 is an alias, as a str. Defaults to None, which means all columns are
@@ -140,15 +140,12 @@ class Query:
         """
         query = cls(QueryCommands.SELECT)
 
-        if columns is None:
-            columns = []
-        else:
-            # Validate columns argument
-            assert all(
-                isinstance(c, (Column, F))
-                or (len(c) == 2 and isinstance(c[0], Column) and isinstance(c[1], str))
-                for c in columns
-            ), "Invalid argument for columns"
+        # Validate columns argument
+        assert all(
+            isinstance(c, (Column, F))
+            or (len(c) == 2 and isinstance(c[0], Column) and isinstance(c[1], str))
+            for c in columns
+        ), "Invalid argument for columns"
 
         query._select = tuple(columns)
 
