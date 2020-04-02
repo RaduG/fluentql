@@ -52,7 +52,7 @@ def test_column_selection(table_a, dialect):
 
 
 def test_column_selection_alias(table_a, dialect):
-    q = Q.select((table_a["col1"], "col1_alias")).from_(table_a)
+    q = Q.select(table_a["col1"].alias("col1_alias")).from_(table_a)
 
     assert dialect.compile(q) == "select table_a.col1 as col1_alias from table_a;"
 

@@ -79,7 +79,7 @@ class Dialect:
         if query._target is None or len(query._target) == 0:
             raise CompilationError("Select query must have a target")
 
-        columns = self.compile_target_columns(query._select)
+        columns = self.compile_target_columns(query._select, with_alias=True)
         from_ = self.compile_from(query._target[0])
 
         q = f"{self._get_keyword('SELECT')} {columns} {from_}"
@@ -105,12 +105,14 @@ class Dialect:
 
         return q
 
-    def compile_target_columns(self, columns):
+    def compile_target_columns(self, columns, with_alias=False):
         """
         Compile a list of column targets
 
         Args:
-            columns (list(str|F|tuple(str, str))): 
+            columns (list(Column|F)):
+            with_alias (bool): If True, aliased Columns will compile
+                with an 'as' clause. Defaults to False.
         
         Returns:
             str
@@ -120,28 +122,35 @@ class Dialect:
             return self._get_keyword("ALL")
 
         return f"{self._get_keyword('LIST_SEPARATOR')} ".join(
-            self.compile_target_column(column) for column in columns
+            self.compile_target_column(column, with_alias) for column in columns
         )
 
-    def compile_target_column(self, column):
+    def compile_target_column(self, column, with_alias=False):
         """
         Compile a target column
 
         Args:
-            column (Column|F|tuple(Column|F, str)):
+            column (Column|F):
+            with_alias (bool): If True, if column is aliased, it will compile
+                with an 'as' clause. Defaults to False.
         
         Returns:
             str
         """
         if isinstance(column, Column):
-            return f"{column.table.name}.{column.name}"
+            compiled_column = f"{column.table.name}.{column.name}"
+
+            if column.is_aliased:
+                compiled_column = (
+                    f"{compiled_column} {self.keywords.AS} {column._alias}"
+                )
+
+            return compiled_column
 
         if isinstance(column, F):
             return self.compile_function(column)
 
-        # Alias
-        compiled_column = self.compile_target_column(column[0])
-        return f"{compiled_column} {self._get_keyword('AS')} {column[1]}"
+        raise CompilationError(f"Unknown type for column: {type(column)}")
 
     def compile_function(self, function):
         """

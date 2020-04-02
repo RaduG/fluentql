@@ -13,7 +13,24 @@ class Column:
         """
         self.name = name
         self.type = type_
+        self._alias = None
         self.table = None
+
+    def alias(self, name):
+        """
+        Returns a copy of the current object with the alias
+        property set to name.
+
+        Args:
+            name (str): Name to alias to
+        
+        Returns:
+            Column
+        """
+        column = self._copy()
+        column._alias = name
+
+        return column
 
     def bind(self, table):
         """
@@ -27,6 +44,46 @@ class Column:
         """
         self.table = table
         return self
+
+    @property
+    def is_aliased(self):
+        """
+        Returns True if _alias is not None, False otherwise.
+
+        Returns:
+            bool
+        """
+        return self._alias is not None
+
+    def _copy(self):
+        """
+        Create a new object bound to the same table instance
+        and column name and of the same type. Useful to implement column aliases.
+        The new instance will be equal (as per __eq__) to the
+        current instance.
+
+        Returns:
+            Column
+        """
+        return type(self)(self.name, self.type).bind(self.table)
+
+    def __eq__(self, other):
+        """
+        Compare two Column instances. Two columns are identical when they
+        point to the same Table object, have the same name and have the same type.
+
+        Args:
+            other (Column):
+        
+        Returns:
+            bool
+        """
+        return (
+            isinstance(other, type(self))
+            and other.table is self.table
+            and other.name == self.name
+            and other.type == self.type
+        )
 
 
 class Table:

@@ -129,11 +129,9 @@ class Query:
         Initialise a select query with a list of columns.
 
         Args:
-            *columns (Column|F|tuple(Column, str)): Columns
-                to select. Each element can either be a Column, an instance of F, 
-                or a 2-tuple where the first element is a Column object and the second
-                is an alias, as a str. Defaults to None, which means all columns are
-                selected.
+            *columns (Column|F): Columns
+                to select. Each element can either be a Column or an instance of F.
+                Defaults to None, which means all columns are selected.
 
         Returns:
             Query instance
@@ -142,9 +140,7 @@ class Query:
 
         # Validate columns argument
         assert all(
-            isinstance(c, (Column, F))
-            or (len(c) == 2 and isinstance(c[0], Column) and isinstance(c[1], str))
-            for c in columns
+            isinstance(c, (Column, F)) for c in columns
         ), "Invalid argument for columns"
 
         query._select = tuple(columns)
