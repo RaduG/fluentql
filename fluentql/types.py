@@ -42,9 +42,11 @@ def validate_call_types(parent_name, expected_types, args, raise_error=False):
 
         # Now we need to look at groups, specifically for TypeVars
         if isinstance(t, TypeVar) and len(indices) > 1:
-            # All TypeVars must strictly match by type
+            # All TypeVars must strictly match by type or be subtypes of each other
             if not all(
-                type(args[indices[0]]) is type(args[indices[i]]) for i in indices[1:]
+                type_is_valid(args[indices[0]], args[indices[i]])
+                or type_is_valid(args[indices[i]], args[indices[0]])
+                for i in indices[1:]
             ):
                 if raise_error:
                     raise_generic_type_mismatch(
@@ -105,6 +107,7 @@ def type_is_valid(given, expected):
         # Then, try isinstance
         if isinstance(given, expected):
             return True
+
     except TypeError:
         pass
 
