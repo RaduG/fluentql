@@ -3,7 +3,7 @@ from types import FunctionType
 
 from .errors import QueryBuilderError
 from .function import F
-from .table import Column
+from .types import Column
 
 
 class QueryCommands(Enum):
@@ -42,12 +42,14 @@ class Operators:
 
 
 class BooleanClause:
-    def __init__(self, boolean=None):
+    def __init__(self, clause, boolean=None):
         """
         Args:
+            clause (F):
             boolean (str): Defaults to None
         """
         self._boolean = boolean
+        self._group = group
 
     @property
     def boolean(self):
@@ -64,34 +66,6 @@ class BooleanClause:
             value (str):
         """
         self._boolean = value
-
-
-class SimpleBooleanClause(BooleanClause):
-    def __init__(self, left, op=None, right=None, boolean=None):
-        """
-        Args:
-            left (str|F|Query):
-            op (str): Defaults to None
-            right (object): Defaults to None
-            boolean (str): Defaults to None
-        """
-        super().__init__(boolean)
-
-        self._left = left
-        self._op = op
-        self._right = right
-
-
-class GroupBooleanClause(BooleanClause):
-    def __init__(self, group, boolean=None):
-        """
-        Args:
-            group (Query):
-            boolean (str): Defaults to None
-        """
-        super().__init__(boolean)
-
-        self._group = group
 
 
 class Query:
@@ -177,33 +151,23 @@ class Query:
         """
         return self.from_(target)
 
-    def where(self, column, op=None, value=None, boolean="and"):
+    def where(self, condition, boolean="and"):
         """
         Add a where clause to a query.
 
         Args:
-            column (Column|F|callable):
-                - If a Column object is given, the name and bound table
-                will be used, and op and value are also required.
-                - If a F is given, the transformation is to be applied
-                as defined in the F itself, and op and value are
-                also required.
+            condition (F|callable):
+                - The default implementation is when an F is given, for
+                operations using built in functions.
                 - If a callable is given, it should take a query object as its
                 first positional argument, and it assumes that the user wants to
                 build a nested where clause group.
-            op (str): Operator to use. Required if column is a str or a F.
-                Defaults to None.
-            value (object): Value to compare against. If a Query object is given,
-                that query will be treated as a sub-query. Otherwise, it can be
-                any object that can be formatted to a string. The dialect used to
-                construct the query may contain specific implementations of string
-                formatting for specific types, such as datetime objects.
             boolean (str): Boolean operator between the previous where clause and
                 this where clause. Defaults to "and".
         Returns:
             Query self
         """
-        if isinstance(column, FunctionType):
+        if isinstance(condition, FunctionType):
             where_group = self._sub_query(QueryCommands.WHERE)
             # Inherit targets
             where_group._target = list(self._target)
@@ -211,13 +175,11 @@ class Query:
             # Call user function, which may or may not return a Query
             # but that doesn't matter as we expect the given query
             # object to be mutated
-            column(where_group)
+            condition(where_group)
 
-            where_clause = GroupBooleanClause(where_group)
+            where_clause = BooleanClause(where_group)
         else:
-            assert op is not None and value is not None, "Op and value cannot be None"
-
-            where_clause = SimpleBooleanClause(column, op, value)
+            where_clause = BooleanClause(condition)
 
         if self._where is None:
             self._where = []
@@ -229,11 +191,11 @@ class Query:
 
         return self
 
-    def and_where(self, column, op=None, value=None):
+    def and_where(self, condition):
         """
-        Alias for where(column, op, value, boolean="and").
+        Alias for where(condition, boolean="and").
 
-        column (Column|F|callable):
+        condition (F|callable):
             - If a Column object is given, the name and bound table
             will be used, and op and value are also required.
             - If a F is given, the transformation is to be applied
@@ -249,7 +211,7 @@ class Query:
             may contain specific implementations of string formatting for
             specific types, such as datetime objects.
         """
-        return self.where(column, op, value, "and")
+        return self.where(condition, "and")
 
     def or_where(self, column, op=None, value=None):
         """

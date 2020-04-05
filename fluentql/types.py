@@ -1,131 +1,290 @@
-from collections import defaultdict
-from typing import TypeVar, Union
+from .base_types import (
+    AnyType,
+    BooleanType,
+    NumberType,
+    StringType,
+    DateType,
+    DateTimeType,
+    TimeType,
+    Collection,
+)
+
+from .function import (
+    GreaterThan,
+    GreaterThanOrEqual,
+    LessThan,
+    LessThanOrEqual,
+    Equals,
+    NotEqual,
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Modulo,
+    BitwiseAnd,
+    BitwiseOr,
+    BitwiseXor,
+)
 
 
-def raise_type_error(parent_name, arg_name, expected_type, found_type):
-    raise TypeError(
-        f"Argument {arg_name} for {parent_name}: expected {expected_type.__name__}, found {found_type.__name__}"
-    )
-
-
-def raise_generic_type_mismatch(parent_name, arg_names, found_types):
-    raise TypeError(
-        f"Arguments {', '.join([str(n) for n in arg_names])} of {parent_name} expected to have the same type. Found {', '.join([t.__name__ for t in found_types])}"
-    )
-
-
-def validate_call_types(parent_name, expected_types, args, raise_error=False):
+class WithOperatorSupport:
     """
-    Validate if a function call made with args matches the type hints.
-
-    Args:
-        parent_name (str): Name of the class/function for which the validation is performed.
-            Only used for reporting purposes.
-        expected_types (list(type)): Expected arg types
-        args (list(object)): Function call arguments
-        raise_error (bool): If True, if there is a type mismatch, a TypeError
-            is thrown. Otherwise, the truth value of the condition is returned.
-            Defaults to False.
-    
-    Returns:
-        bool
-    """
-    types_group = group_arg_types(expected_types)
-
-    for t, indices in types_group.items():
-        for i in indices:
-            if not type_is_valid(args[i], t):
-                if raise_error:
-                    raise_type_error(parent_name, i, t, args[i])
-                else:
-                    return False
-
-        # Now we need to look at groups, specifically for TypeVars
-        if isinstance(t, TypeVar) and len(indices) > 1:
-            # All TypeVars must strictly match by type or be subtypes of each other
-            if not all(
-                type_is_valid(args[indices[0]], args[indices[i]])
-                or type_is_valid(args[indices[i]], args[indices[0]])
-                for i in indices[1:]
-            ):
-                if raise_error:
-                    raise_generic_type_mismatch(
-                        parent_name, indices, [type(args[i]) for i in indices]
-                    )
-                else:
-                    return False
-    return True
-
-
-def group_arg_types(types):
-    """
-    Convers a list of arg types to a dict where types are keys
-    and the values are the indices in types where a specific type
-    was found. This is required in order to process TypeVars.
-
-    Args:
-        types (list(type)):
-    
-    Returns:
-        dict
-    """
-    # Create a copy of types
-    types = list(types)
-
-    types_group = defaultdict(lambda: [])
-
-    for i, t in enumerate(types):
-        types_group[t].append(i)
-
-    return dict(types_group)
-
-
-def type_is_valid(given, expected):
-    """
-    Checks if the given type matches the expected. Will perform
-    some validation for types in the typing module, including TypeVar and Union,
-    but not all.
-
-    Args:
-        given (type):
-        expected (type):
-    
-    Returns:
-        bool
+    Implements operator support
     """
 
-    # First, try perfect match
-    if given is expected:
-        return True
+    def __gt__(self, other):
+        return GreaterThan(self, other)
 
-    # Try nicer ways for non-Type variables
-    try:
-        # Then, try subclass
-        if issubclass(given, expected):
-            return True
+    def __ge__(self, other):
+        return GreaterThanOrEqual(self, other)
 
-        # Then, try isinstance
-        if isinstance(given, expected):
-            return True
+    def __lt__(self, other):
+        return LessThan(self, other)
 
-    except TypeError:
-        pass
+    def __le__(self, other):
+        return LessThanOrEqual(self, other)
 
-    # Is this a TypeVar?
-    if isinstance(expected, TypeVar):
-        matching_types = expected.__constraints__
+    def __eq__(self, other):
+        return Equals(self, other)
 
-        # If the TypeVar has type constraints, check against those. If there are none,
-        # the all() call will return True
-        if all(type_is_valid(given, t) for t in matching_types):
-            return True
+    def __ne__(self, other):
+        return NotEqual(self, other)
 
-    # Is this a Union?
-    if isinstance(expected, Union):
-        matching_types = expected.__args__
+    def __add__(self, other):
+        return Add(self, other)
 
-        # Get the types part of Union and check against those
-        if all(type_is_valid(given, t) for t in matching_types):
-            return True
+    def __radd__(self, other):
+        return Add(other, self)
 
-    return False
+    def __sub__(self, other):
+        return Subtract(self, other)
+
+    def __rsub__(self, other):
+        return Subtract(other, self)
+
+    def __mul__(self, other):
+        return Multiply(self, other)
+
+    def __rmul__(self, other):
+        return Multiply(other, self)
+
+    def __truediv__(self, other):
+        return Divide(self, other)
+
+    def __rtruediv__(self, other):
+        return Divide(other, self)
+
+    def __mod__(self, other):
+        return Modulo(self, other)
+
+    def __rmod__(self, other):
+        return Modulo(other, self)
+
+    def __and__(self, other):
+        return BitwiseAnd(self, other)
+
+    def __rand__(self, other):
+        return BitwiseAnd(other, self)
+
+    def __or__(self, other):
+        return BitwiseOr(self, other)
+
+    def __ror__(self, other):
+        return BitwiseOr(other, self)
+
+    def __xor__(self, other):
+        return BitwiseXor(self, other)
+
+    def __rxor__(self, other):
+        return BitwiseXor(other, self)
+
+
+class Constant(WithOperatorSupport):
+    """
+    Container object for constant values
+    """
+
+    def __init__(self, value):
+        self._value = value
+
+    @property
+    def value(self):
+        """
+        Returns the encapsulated value. Used to lightly enforce
+        that this is read-only once instantiated.
+
+        Returns:
+            object
+        """
+        return self._value
+
+
+class Column(WithOperatorSupport):
+    def __init__(self, name):
+        """
+        Args:
+            name (str): Column name
+        """
+        self.name = name
+        self._alias = None
+        self.table = None
+
+    def alias(self, name):
+        """
+        Returns a copy of the current object with the alias
+        property set to name.
+
+        Args:
+            name (str): Name to alias to
+        
+        Returns:
+            Column
+        """
+        column = self._copy()
+        column._alias = name
+
+        return column
+
+    def bind(self, table):
+        """
+        Bind column to a table
+
+        Args:
+            table (Table):
+        
+        Returns:
+            Column self
+        """
+        self.table = table
+        return self
+
+    def equals(self, other):
+        """
+        Compare two Column instances. Two columns are identical when they
+        point to the same Table object, have the same name and have the same type.
+
+        Args:
+            other (Column):
+        
+        Returns:
+            bool
+        """
+        return (
+            isinstance(other, type(self))
+            and other.table is self.table
+            and other.name == self.name
+            and other.type == self.type
+        )
+
+    @property
+    def is_aliased(self):
+        """
+        Returns True if _alias is not None, False otherwise.
+
+        Returns:
+            bool
+        """
+        return self._alias is not None
+
+    def _copy(self):
+        """
+        Create a new object bound to the same table instance
+        and column name and of the same type. Useful to implement column aliases.
+        The new instance will be equal (as per __eq__) to the
+        current instance.
+
+        Returns:
+            Column
+        """
+        return type(self)(self.name, self.type).bind(self.table)
+
+
+class AnyColumn(Collection[AnyType], Column):
+    pass
+
+
+class NumberColumn(Collection[NumberType], Column):
+    pass
+
+
+class BooleanColumn(Collection[BooleanType], Column):
+    pass
+
+
+class StringColumn(Collection[StringType], Column):
+    pass
+
+
+class DateColumn(Collection[DateType], Column):
+    pass
+
+
+class DateTimeColumn(Collection[DateTimeType], Column):
+    pass
+
+
+class TimeColumn(Collection[TimeType], Column):
+    pass
+
+
+class Table:
+    __columns__ = None
+
+    def __init__(self, name, db=None):
+        """
+        Args:
+            name (str): Name of the table
+            db (str): Name of the target database, optional
+        """
+        self.name = name
+        self.db = db
+
+    def column(self, name):
+        """
+        Returns a Column object for a given column name.
+
+        If the Table has a defined schema, this will raise a 
+        TODO: create error
+        error if the column does not exist in the schema. Otherwise,
+        a new instance of Column is created, with type AnyColumn.
+
+        Args:
+            name (str): Column name
+        
+        Returns
+            Column
+        """
+        if self.__columns__ is None:
+            return AnyColumn(name).bind(self)
+
+        return self.__columns__[name]
+
+    def all(self):
+        """
+        To be used when all the columns in a table need to be referenced.
+        This returns an instance of Column named "*" bound to the table,
+        which when compiled yields tablename.*
+
+        Returns:
+            Column
+        """
+        return Column("*").bind(self)
+
+    @property
+    def qualname(self):
+        if self.db is None:
+            return self.name
+
+        return f"{self.db}.{self.name}"
+
+    def __getitem__(self, name):
+        """
+        Key access helper for .column(name)
+
+        Args:
+            name (str): Column name
+        
+        Returns:
+            Column
+        """
+        return self.column(name)

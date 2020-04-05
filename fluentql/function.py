@@ -1,15 +1,7 @@
-from typing import TypeVar, Union
+from typing import Any, TypeVar, Union
 
-
-from .table import (
-    AnyColumn,
-    NumberColumn,
-    StringColumn,
-    DateColumn,
-    BooleanColumn,
-    BooleanType,
-)
-from .types import validate_call_types
+from .base_types import AnyType, BooleanType, Collection
+from .type_checking import validate_call_types
 
 
 Constant = TypeVar("Constant")
@@ -61,6 +53,11 @@ class F:
 
     def __init__(self, *args):
         self._validate_args(args)
+        self.__values__ = args
+
+    @property
+    def values(self):
+        return self.__values__
 
     @classmethod
     def new(cls, name):
@@ -90,88 +87,90 @@ class F:
                 f"{cls.__name__} takes {len(cls.__args__)} arguments, {len(args)} given"
             )
         else:
-            validate_call_types(cls.__name__, cls.__args__, args, True)
+            validate_call_types(
+                cls.__name__, cls.__args__, [type(arg) for arg in args], True
+            )
 
 
 class Add(F):
-    a: Union[Constant, AnyColumn]
-    b: Union[Constant, AnyColumn]
-    returns: Union[Constant, AnyColumn]
+    a: Union[Constant, Collection[AnyType]]
+    b: Union[Constant, Collection[AnyType]]
+    returns: Union[Constant, Collection[AnyType]]
 
 
 class Subtract(F):
-    a: Union[Constant, AnyColumn]
-    b: Union[Constant, AnyColumn]
-    returns: Union[Constant, AnyColumn]
+    a: Union[Constant, Collection[AnyType]]
+    b: Union[Constant, Collection[AnyType]]
+    returns: Union[Constant, Collection[AnyType]]
 
 
 class Multiply(F):
-    a: Union[Constant, AnyColumn]
-    b: Union[Constant, AnyColumn]
-    returns: Union[Constant, AnyColumn]
+    a: Union[Constant, Collection[AnyType]]
+    b: Union[Constant, Collection[AnyType]]
+    returns: Union[Constant, Collection[AnyType]]
 
 
 class Divide(F):
-    a: Union[Constant, AnyColumn]
-    b: Union[Constant, AnyColumn]
-    returns: Union[Constant, AnyColumn]
+    a: Union[Constant, Collection[AnyType]]
+    b: Union[Constant, Collection[AnyType]]
+    returns: Union[Constant, Collection[AnyType]]
 
 
 class Modulo(F):
-    a: Union[Constant, AnyColumn]
-    b: Union[Constant, AnyColumn]
-    returns: Union[Constant, AnyColumn]
+    a: Union[Constant, Collection[AnyType]]
+    b: Union[Constant, Collection[AnyType]]
+    returns: Union[Constant, Collection[AnyType]]
 
 
 class BitwiseOr(F):
-    a: Union[BooleanColumn, BooleanType]
-    b: Union[BooleanColumn, BooleanType]
-    returns: Union[BooleanColumn, BooleanType]
+    a: Union[Collection[BooleanType], BooleanType]
+    b: Union[Collection[BooleanType], BooleanType]
+    returns: Union[Collection[BooleanType], BooleanType]
 
 
 class BitwiseAnd(F):
-    a: Union[BooleanColumn, BooleanType]
-    b: Union[BooleanColumn, BooleanType]
-    returns: Union[BooleanColumn, BooleanType]
+    a: Union[Collection[BooleanType], BooleanType]
+    b: Union[Collection[BooleanType], BooleanType]
+    returns: Union[Collection[BooleanType], BooleanType]
 
 
 class BitwiseXor(F):
-    a: Union[BooleanColumn, BooleanType]
-    b: Union[BooleanColumn, BooleanType]
-    returns: Union[BooleanColumn, BooleanType]
+    a: Union[Collection[BooleanType], BooleanType]
+    b: Union[Collection[BooleanType], BooleanType]
+    returns: Union[Collection[BooleanType], BooleanType]
 
 
 class Equals(F):
-    a: Union[Constant, AnyColumn]
-    b: Union[Constant, AnyColumn]
-    returns: Union[BooleanType, BooleanColumn]
+    a: Union[Constant, Collection[AnyType]]
+    b: Union[Constant, Collection[AnyType]]
+    returns: Union[BooleanType, Collection[BooleanType]]
 
 
 class LessThan(F):
-    a: Union[Constant, AnyColumn]
-    b: Union[Constant, AnyColumn]
-    returns: Union[BooleanType, BooleanColumn]
+    a: Union[Constant, Collection[AnyType]]
+    b: Union[Constant, Collection[AnyType]]
+    returns: Union[BooleanType, Collection[BooleanType]]
 
 
-class LesTshanOrEqual(F):
-    a: Union[Constant, AnyColumn]
-    b: Union[Constant, AnyColumn]
-    returns: Union[BooleanType, BooleanColumn]
+class LessThanOrEqual(F):
+    a: Union[Constant, Collection[AnyType]]
+    b: Union[Constant, Collection[AnyType]]
+    returns: Union[BooleanType, Collection[BooleanType]]
 
 
 class GreaterThan(F):
-    a: Union[Constant, AnyColumn]
-    b: Union[Constant, AnyColumn]
-    returns: Union[BooleanType, BooleanColumn]
+    a: Union[Constant, Collection[AnyType]]
+    b: Union[Constant, Collection[AnyType]]
+    returns: Union[BooleanType, Collection[BooleanType]]
 
 
 class GreaterThanOrEqual(F):
-    a: Union[Constant, AnyColumn]
-    b: Union[Constant, AnyColumn]
-    returns: Union[BooleanType, BooleanColumn]
+    a: Union[Constant, Collection[AnyType]]
+    b: Union[Constant, Collection[AnyType]]
+    returns: Union[BooleanType, Collection[BooleanType]]
 
 
 class NotEqual(F):
-    a: Union[Constant, AnyColumn]
-    b: Union[Constant, AnyColumn]
-    returns: Union[BooleanType, BooleanColumn]
+    a: Union[Constant, Collection[AnyType]]
+    b: Union[Constant, Collection[AnyType]]
+    returns: Union[BooleanType, Collection[BooleanType]]
