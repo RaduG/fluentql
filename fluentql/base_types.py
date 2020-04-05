@@ -24,3 +24,7 @@ class Collection(Generic[T]):
         subclasses are constructed, assumptions which are NOT made in type_checking
         """
         cls.__dtype__ = cls.__orig_bases__[0].__args__[0]
+
+
+class Referenceable:
+    pass

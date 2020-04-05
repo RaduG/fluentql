@@ -1,6 +1,6 @@
 from typing import Any, TypeVar, Union
 
-from .base_types import AnyType, BooleanType, Collection
+from .base_types import AnyType, BooleanType, Collection, Referenceable
 from .type_checking import validate_call_types
 
 
@@ -10,7 +10,7 @@ NoArgs = TypeVar("NoArgs")
 VarArgs = TypeVar("VarArgs")
 
 
-class F:
+class F(Referenceable):
     def __init_subclass__(cls, **kwargs):
         """
         Use init_subclass to map the arguments / return value based
@@ -46,7 +46,7 @@ class F:
 
         if len(annotations) == 0:
             cls.__args__ = AnyArgs
-        elif len(annotations) == 1 and annotations.values()[0] is NoArgs:
+        elif len(annotations) == 1 and list(annotations.values())[0] is NoArgs:
             cls.__args__ = NoArgs
         else:
             cls.__args__ = tuple(annotations.values())
@@ -174,3 +174,19 @@ class NotEqual(F):
     a: Union[Constant, Collection[AnyType]]
     b: Union[Constant, Collection[AnyType]]
     returns: Union[BooleanType, Collection[BooleanType]]
+
+
+class As(F):
+    a: Referenceable
+    b: str
+    returns: Referenceable
+
+
+class TableStar(F):
+    a: Referenceable
+    returns: Any
+
+
+class Star(F):
+    a: NoArgs
+    returns: Any

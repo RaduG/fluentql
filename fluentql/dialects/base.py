@@ -1,7 +1,7 @@
-from ..function import F
-from ..query import Query, SimpleBooleanClause, GroupBooleanClause
+from ..function import F, Star
+from ..query import Query
 from ..errors import CompilationError
-from ..table import Column
+from ..types import Column, Table
 
 
 class Keywords:
@@ -9,7 +9,7 @@ class Keywords:
     FROM = "from"
     AS = "as"
     WHERE = "where"
-    ALL = "*"
+    STAR = "*"
     LIST_SEPARATOR = ","
     AND = "and"
     OR = "or"
@@ -44,7 +44,51 @@ class Dialect:
         """
         self._options = {**self._options, **options}
 
-    def compile(self, query, terminal_query=True):
+    def dispatch(self, o):
+        """
+        Dispatch to appropriate function
+
+        Args:
+            o (object):
+        
+        Returns:
+            str
+        """
+        method_name = None
+
+        if isinstance(o, Query):
+            command = o._command.value.lower()
+            method_name = f"compile_{command}_query"
+
+        elif isinstance(o, F):
+            # First look for specific function implementations
+            f_name = type(o).__name__.lower()
+            method_name = f"compile_{f_name}_function"
+
+            # If that method doesn't exist, fall back to generic
+            if not hasattr(self, method_name):
+                method_name = f"compile_function"
+
+        elif isinstance(o, Column):
+            method_name = f"compile_column_reference"
+
+        elif isinstance(o, Table):
+            method_name = f"compile_table_reference"
+
+        else:
+            # Assume constant
+            type_name = type(o).__name__.lower()
+
+            # First look for specific function implementations
+            method_name = f"compile_{type_name}_constant"
+
+            if not hasattr(self, method_name):
+                # Fall back to generic
+                method_name = f"compile_constant"
+
+        return getattr(self, method_name)(o)
+
+    def compile(self, query):
         """
         Compile a given query
 
@@ -57,15 +101,16 @@ class Dialect:
         Returns:
             str
         """
-        command = query._command.value
-        compiled_query = getattr(self, f"compile_{command}")(query)
+        return self.dispatch(query)
+        # command = query._command.value
+        # compiled_query = getattr(self, f"compile_{command}")(query)
 
-        if terminal_query:
-            compiled_query = f"{compiled_query}{self._get_keyword('QUERY_END')}"
+        # if terminal_query:
+        #    compiled_query = f"{compiled_query}{self._get_keyword('QUERY_END')}"
 
-        return compiled_query
+        # return compiled_query
 
-    def compile_select(self, query):
+    def compile_select_query(self, query):
         """
         Compile a select query
 
@@ -79,267 +124,94 @@ class Dialect:
         if query._target is None or len(query._target) == 0:
             raise CompilationError("Select query must have a target")
 
-        columns = self.compile_target_columns(query._select, with_alias=True)
-        from_ = self.compile_from(query._target[0])
+        q_template_components = ["{select}", "{targets}", "{from_}"]
 
-        q = f"{self._get_keyword('SELECT')} {columns} {from_}"
+        query_components = {}
+        query_components["select"] = self._get_keyword("SELECT")
+
+        if type(query._select) is Star:
+            query_components["targets"] = self.dispatch(query._select)
+        else:
+            query_components["targets"] = ", ".join(
+                self.dispatch(t) for t in query._select
+            )
+
+        query_components[
+            "from_"
+        ] = f"{self._get_keyword('FROM')} {self.dispatch(query._target[0])}"
 
         # Compile join if it exists
         if query._join is not None:
-            for join in query._join:
-                join_type = join.get_option("join_type")
-                method_name = f"compile_{join_type}_join"
+            joins = [self.dispatch(join) for join in query._join]
+            query_components["joins"] = " ".join(joins)
 
-                # First try specific join method, otherwise use fallback
-                try:
-                    compiled_join = getattr(self, method_name)(join)
-                except AttributeError:
-                    compiled_join = self.compile_join(join)
+        if query._join is not None:
+            q_template_components.append("{joins}")
+            joins = [self.dispatch(join) for join in query._join]
+            query_components["joins"] = " ".join(joins)
 
-                q = f"{q} {compiled_join}"
-
-        # Compile Where if it exists
         if query._where is not None:
-            where = self.compile_where(query._where)
-            q = f"{q} {where}"
+            q_template_components.append("{where}")
+            query_components["where"] = self.dispatch(query._where)
 
-        return q
+        query_components["query_end"] = self._get_keyword("QUERY_END")
+        q_template_components.append("{query_end}")
 
-    def compile_target_columns(self, columns, with_alias=False):
+        query_template = " ".join(q_template_components)
+
+        return query_template.format(**query_components)
+
+    def compile_as_function(self, f):
         """
-        Compile a list of column targets
-
+        Compiles as: 
+            dispatch(values[0]) AS dispatch(values[1])
+        
         Args:
-            columns (list(Column|F)):
-            with_alias (bool): If True, aliased Columns will compile
-                with an 'as' clause. Defaults to False.
+            f (As):
         
         Returns:
             str
         """
-        # Select all
-        if len(columns) == 0:
-            return self._get_keyword("ALL")
+        as_keyword = self._get_keyword("AS")
 
-        return f"{self._get_keyword('LIST_SEPARATOR')} ".join(
-            self.compile_target_column(column, with_alias) for column in columns
-        )
+        return self.compile_infix_function(f, as_keyword)
 
-    def compile_target_column(self, column, with_alias=False):
+    def compile_equals_function(self, f):
+        return self.compile_infix_function(f, "=")
+
+    def compile_bitwiseand_function(self, f):
+        and_keyword = self._get_keyword("AND")
+
+        return self.compile_infix_function(f, and_keyword)
+
+    def compile_bitwiseor_function(self, f):
+        or_keyword = self._get_keyword("OR")
+
+        return self.compile_infix_function(f, or_keyword)
+
+    def compile_infix_function(self, f, name=None):
         """
-        Compile a target column
+        Compiles a function with 2 arguments as:
+            dispatch(values[0]) NAME dispatch(values[1]).
+        If name is not given, the function name is used.
 
         Args:
-            column (Column|F):
-            with_alias (bool): If True, if column is aliased, it will compile
-                with an 'as' clause. Defaults to False.
+            f (F):
+            name (str): Defaults to None
         
         Returns:
             str
         """
-        if isinstance(column, Column):
-            compiled_column = f"{column.table.name}.{column.name}"
+        values = f.__values__
 
-            if column.is_aliased:
-                compiled_column = (
-                    f"{compiled_column} {self.keywords.AS} {column._alias}"
-                )
+        left = self.dispatch(values[0])
+        if name is None:
+            name = type(f).__name__.lower()
+        right = self.dispatch(values[1])
 
-            return compiled_column
+        return f"{left} {name} {right}"
 
-        if isinstance(column, F):
-            return self.compile_function(column)
-
-        raise CompilationError(f"Unknown type for column: {type(column)}")
-
-    def compile_function(self, function):
-        """
-        Compile a F
-
-        Args:
-            function (F):
-        
-        Returns:
-            str
-        """
-        function_name = function.name.lower()
-
-        method_name = f"compile_func_{function_name}"
-
-        try:
-            return getattr(self, method_name)(function)
-        except AttributeError:
-            return self.compile_generic_func(function)
-
-    def compile_from(self, target):
-        """
-        Compiles a from clause
-
-        Args:
-            target (object): Object with a 'name' attribute
-        
-        Returns:
-            str
-        """
-        return f"{self._get_keyword('FROM')} {target.name}"
-
-    def compile_where(self, wheres):
-        """
-        Compile a where query or a where clause made of a
-        list of conditions
-
-        Args:
-            wheres (Query|list): Query or list of SimpleBooleanClause
-                and GroupBooleanClause
-        
-        Returns:
-            str
-        """
-        # We need this later on
-        is_query = isinstance(wheres, Query)
-        if is_query:
-            wheres = wheres._where
-
-        compiled_wheres = []
-
-        for where in wheres:
-            if isinstance(where, SimpleBooleanClause):
-                compiled_where = self.compile_simple_boolean_clause(where)
-            elif isinstance(where, GroupBooleanClause):
-                compiled_where = self.compile_group_boolean_clause(where)
-
-            if where.boolean is not None:
-                given_boolean = where.boolean
-
-                if given_boolean == "and":
-                    boolean = self._get_keyword("AND")
-                elif given_boolean == "or":
-                    boolean = self._get_keyword("OR")
-                else:
-                    raise CompilationError(f"Boolean {given_boolean} not supported")
-
-                compiled_where = f"{compiled_where} {boolean}"
-
-            compiled_wheres.append(compiled_where)
-
-        compiled_wheres_str = " ".join(compiled_wheres)
-
-        # TODO: proper fix for this issue
-        # If the original argument was a Query, then we don't need to
-        # add the keyword because it means it's a sub clause in a where
-        if is_query:
-            return compiled_wheres_str
-
-        return f"{self._get_keyword('WHERE')} {compiled_wheres_str}"
-
-    def compile_on(self, ons):
-        """
-        Compiles an on query or a list on on clauses
-
-        Args:
-            ons (Query|list(BooleanClause)):
-        
-        Returns:
-            str
-        """
-        if isinstance(ons, Query):
-            ons = ons._on
-
-        compiled_ons = []
-
-        for on in ons:
-            if isinstance(on, SimpleBooleanClause):
-                compiled_on = self.compile_simple_boolean_clause(on)
-            elif isinstance(on, GroupBooleanClause):
-                compiled_on = self.compile_group_boolean_clause(on)
-
-            if on.boolean is not None:
-                given_boolean = on.boolean
-
-                if given_boolean == "and":
-                    boolean = self._get_keyword("AND")
-                elif given_boolean == "or":
-                    boolean = self._get_keyword("OR")
-                else:
-                    raise CompilationError(f"Boolean {given_boolean} not supported")
-
-                compiled_on = f"{compiled_on} {boolean}"
-
-            compiled_ons.append(compiled_on)
-
-        return " ".join(compiled_ons)
-
-    def compile_simple_boolean_clause(self, clause):
-        """
-        Compile a SimpleBooleanClause
-
-        Args:
-            clause (SimpleBooleanClause):
-        
-        Returns:
-            str
-        """
-        left = self.compile_term(clause._left)
-        op = self.compile_operator(clause._op)
-
-        # Value can be a Query object or a value
-        if isinstance(clause._right, Query):
-            right = f"({self.compile(clause._right, False)})"
-        else:
-            right = self.compile_term(clause._right)
-
-        return f"{left} {op} {right}"
-
-    def compile_term(self, term):
-        """
-        Compile a term. Can be a Column, F or value.
-
-        Args:
-            term (Column|F|object):
-        
-        Returns:
-            str
-        """
-        if isinstance(term, Column):
-            return self.compile_target_column(term)
-        elif isinstance(term, F):
-            return self.compile_function(term)
-        else:
-            return self.compile_value(term)
-
-    def compile_value(self, value):
-        """
-        Compiles a constant value to a string
-
-        Args:
-            value (object):
-        
-        Returns:
-            str
-        """
-        value_type = type(value).__name__
-        method_name = f"compile_{value_type}_value"
-
-        try:
-            return getattr(self, method_name)(value)
-        except AttributeError:
-            return self.compile_generic_value(value)
-
-    def compile_group_boolean_clause(self, clause):
-        """
-        Compiles a GroupBooleanClause
-
-        Args:
-            clause (GroupBooleanClause):
-        
-        Returns:
-            str
-        """
-        clause_query = self.compile(clause._group, False)
-
-        return f"({clause_query})"
-
-    def compile_join(self, join):
+    def compile_join_query(self, join):
         """
         Compile a join query
 
@@ -349,7 +221,7 @@ class Dialect:
         Returns:
             str
         """
-        join_target = join._target[-1]
+        join_target = self.dispatch(join._target[-1])
         join_type = join.get_option("join_type")
 
         if join_type == "inner":
@@ -365,45 +237,19 @@ class Dialect:
         else:
             raise CompilationError(f"Join type invalid: {join_type}")
 
-        compiled_join = f"{join_type_str} {join_target.name}"
+        compiled_join = f"{join_type_str} {join_target}"
 
         if join._on is not None and join._using is not None:
             raise CompilationError("Cannot have both USING and ON in a JOIN")
 
         if join._on is not None:
-            compiled_ons = self.compile_on(join._on)
-            compiled_join = f"{compiled_join} {self._get_keyword('ON')} {compiled_ons}"
+            compiled_on = self.dispatch(join._on)
+            compiled_join = f"{compiled_join} {self._get_keyword('ON')} {compiled_on}"
         elif join._using is not None:
-            compiled_using = self.compile_using(join)
-            compiled_join = f"{compiled_join} {compiled_using}"
+            using = f"using ({self.dispatch(join._using)})"
+            compiled_join = f"{compiled_join} {using}"
 
         return compiled_join
-
-    def compile_using(self, join):
-        """
-        Compile a using clause
-        
-        Args:
-            join (Query): Join sub-query
-        
-        Returns:
-            str
-        """
-        return f"{self._get_keyword('USING')} ({join._using})"
-
-    def compile_operator(self, op):
-        """
-        Compile operator. Currently returns the given argument.
-
-        TODO: map operator from generic list to dialect specifics
-
-        Args:
-            op (str):
-        
-        Returns:
-            str
-        """
-        return op
 
     def compile_str_value(self, val):
         """
@@ -420,7 +266,7 @@ class Dialect:
 
         return f"{quote_char}{val}{quote_char}"
 
-    def compile_generic_value(self, val):
+    def compile_constant(self, val):
         """
         Calls str() on given value object
 
@@ -432,7 +278,10 @@ class Dialect:
         """
         return str(val)
 
-    def compile_generic_func(self, function):
+    def compile_str_constant(self, val):
+        return f"'{val}'"
+
+    def compile_function(self, f):
         """
         Last resort compile method for functions
 
@@ -442,19 +291,27 @@ class Dialect:
         Returns:
             str
         """
-        function_name = function.name
-        args = function.args
+        function_name = type(f).__name__.lower()
+        values = f.__values__
 
-        compiled_args = f"{self._get_keyword('LIST_SEPARATOR')} ".join(
-            [
-                self.compile_target_column(arg)
-                if isinstance(arg, Column)
-                else self.compile_value(arg)
-                for arg in args
-            ]
-        )
+        compiled_values = f", ".join([self.dispatch(v) for v in values])
 
-        return f"{function_name}({compiled_args})"
+        return f"{function_name}({compiled_values})"
+
+    def compile_tablestar_function(self, f):
+        table = f.__values__[0]
+        star = self._get_keyword("STAR")
+
+        return f"{self.dispatch(table)}.{star}"
+
+    def compile_star_function(self, f):
+        return self._get_keyword("STAR")
+
+    def compile_table_reference(self, table):
+        return table.qualname
+
+    def compile_column_reference(self, column):
+        return column.name
 
     def _get_keyword(self, name):
         """

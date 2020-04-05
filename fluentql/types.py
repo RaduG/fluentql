@@ -7,6 +7,7 @@ from .base_types import (
     DateTimeType,
     TimeType,
     Collection,
+    Referenceable,
 )
 
 from .function import (
@@ -24,6 +25,9 @@ from .function import (
     BitwiseAnd,
     BitwiseOr,
     BitwiseXor,
+    As,
+    Star,
+    TableStar,
 )
 
 
@@ -99,27 +103,7 @@ class WithOperatorSupport:
         return BitwiseXor(other, self)
 
 
-class Constant(WithOperatorSupport):
-    """
-    Container object for constant values
-    """
-
-    def __init__(self, value):
-        self._value = value
-
-    @property
-    def value(self):
-        """
-        Returns the encapsulated value. Used to lightly enforce
-        that this is read-only once instantiated.
-
-        Returns:
-            object
-        """
-        return self._value
-
-
-class Column(WithOperatorSupport):
+class Column(WithOperatorSupport, Referenceable):
     def __init__(self, name):
         """
         Args:
@@ -140,10 +124,7 @@ class Column(WithOperatorSupport):
         Returns:
             Column
         """
-        column = self._copy()
-        column._alias = name
-
-        return column
+        return As(self, name)
 
     def bind(self, table):
         """
@@ -227,7 +208,7 @@ class TimeColumn(Collection[TimeType], Column):
     pass
 
 
-class Table:
+class Table(Referenceable):
     __columns__ = None
 
     def __init__(self, name, db=None):
@@ -266,9 +247,9 @@ class Table:
         which when compiled yields tablename.*
 
         Returns:
-            Column
+            TableStar
         """
-        return Column("*").bind(self)
+        return TableStar(self)
 
     @property
     def qualname(self):

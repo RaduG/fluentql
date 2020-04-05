@@ -2,7 +2,7 @@ from enum import Enum
 from types import FunctionType
 
 from .errors import QueryBuilderError
-from .function import F
+from .function import F, BitwiseAnd, BitwiseOr, Star
 from .types import Column
 
 
@@ -39,33 +39,6 @@ class Operators:
     NOT_RLIKE = "not rlike"
     REGEXP = "regexp"
     NOT_REGEXP = "not regexp"
-
-
-class BooleanClause:
-    def __init__(self, clause, boolean=None):
-        """
-        Args:
-            clause (F):
-            boolean (str): Defaults to None
-        """
-        self._boolean = boolean
-        self._group = group
-
-    @property
-    def boolean(self):
-        """
-        Returns:
-            str
-        """
-        return self._boolean
-
-    @boolean.setter
-    def boolean(self, value):
-        """
-        Args:
-            value (str):
-        """
-        self._boolean = value
 
 
 class Query:
@@ -117,7 +90,10 @@ class Query:
             isinstance(c, (Column, F)) for c in columns
         ), "Invalid argument for columns"
 
-        query._select = tuple(columns)
+        if len(columns):
+            query._select = columns
+        else:
+            query._select = Star()
 
         return query
 
@@ -151,7 +127,7 @@ class Query:
         """
         return self.from_(target)
 
-    def where(self, condition, boolean="and"):
+    def where(self, condition, boolean=BitwiseAnd):
         """
         Add a where clause to a query.
 
@@ -162,38 +138,35 @@ class Query:
                 - If a callable is given, it should take a query object as its
                 first positional argument, and it assumes that the user wants to
                 build a nested where clause group.
-            boolean (str): Boolean operator between the previous where clause and
-                this where clause. Defaults to "and".
+            boolean (And|Or): Boolean operator between the previous where clause and
+                this where clause. Defaults to And.
         Returns:
             Query self
         """
         if isinstance(condition, FunctionType):
-            where_group = self._sub_query(QueryCommands.WHERE)
+            where_subquery = self._sub_query(QueryCommands.WHERE)
             # Inherit targets
-            where_group._target = list(self._target)
+            where_subquery._target = list(self._target)
 
             # Call user function, which may or may not return a Query
             # but that doesn't matter as we expect the given query
             # object to be mutated
-            condition(where_group)
+            condition(where_subquery)
 
-            where_clause = BooleanClause(where_group)
-        else:
-            where_clause = BooleanClause(condition)
+            condition = where_subquery._where
 
         if self._where is None:
-            self._where = []
+            self._where = condition
         else:
             # Set last where clause's boolean
-            self._where[-1].boolean = boolean
-
-        self._where.append(where_clause)
+            self._where = boolean(self._where, condition)
 
         return self
 
     def and_where(self, condition):
         """
-        Alias for where(condition, boolean="and").
+        Alias for where(condition, boolean=And). Equivalent
+        to a generic where call, but more explicit.
 
         condition (F|callable):
             - If a Column object is given, the name and bound table
@@ -211,9 +184,9 @@ class Query:
             may contain specific implementations of string formatting for
             specific types, such as datetime objects.
         """
-        return self.where(condition, "and")
+        return self.where(condition, BitwiseAnd)
 
-    def or_where(self, column, op=None, value=None):
+    def or_where(self, condition):
         """
         Alias for where(column, op, value, boolean="or")
 
@@ -233,7 +206,7 @@ class Query:
             may contain specific implementations of string formatting for
             specific types, such as datetime objects.
         """
-        return self.where(column, op, value, boolean="or")
+        return self.where(condition, BitwiseOr)
 
     def join(self, target, on, how="inner"):
         """
@@ -267,6 +240,7 @@ class Query:
 
         if self._join is None:
             self._join = []
+
         self._join.append(join_query)
 
         return self
@@ -343,7 +317,7 @@ class Query:
         """
         return self.join(target, None, how="cross")
 
-    def on(self, left, op=None, right=None, boolean="and"):
+    def on(self, condition, boolean=BitwiseAnd):
         """
         On clause for a join. Only available for ON command
         subqueries.
@@ -363,32 +337,25 @@ class Query:
                 ".on should be called only in JOIN or OR subqueries"
             )
 
-        if isinstance(left, FunctionType):
-            on_group = self._sub_query(QueryCommands.ON)
+        if isinstance(condition, FunctionType):
+            on_subquery = self._sub_query(QueryCommands.ON)
 
             # Inherit targets
-            on_group._target = list(self._target)
+            on_subquery._target = list(self._target)
 
             # Call the user function
-            left(on_group)
+            condition(on_subquery)
 
-            on_clause = GroupBooleanClause(on_group)
-
-        else:
-            assert op is not None and right is not None, "Op and value cannot be None"
-            on_clause = SimpleBooleanClause(left, op, right)
+            condition = on_subquery._on
 
         if self._on is None:
-            self._on = []
+            self._on = condition
         else:
-            # Set last on clause's boolean
-            self._on[-1].boolean = boolean
-
-        self._on.append(on_clause)
+            self._on = boolean(self._on, condition)
 
         return self
 
-    def and_on(self, left, op=None, right=None):
+    def and_on(self, condition):
         """
         Alias for on(left, op, right, boolean="and")
 
@@ -402,9 +369,9 @@ class Query:
         Returns:
             Query self
         """
-        return self.on(left, op, right, boolean="and")
+        return self.on(condition, boolean=BitwiseAnd)
 
-    def or_on(self, left, op=None, right=None):
+    def or_on(self, condition):
         """
         Alias for on(left, op, right, boolean="or")
 
@@ -418,7 +385,7 @@ class Query:
         Returns:
             Query self
         """
-        return self.on(left, op, right, boolean="or")
+        return self.on(condition, boolean=BitwiseOr)
 
     def using(self, column_name):
         """
