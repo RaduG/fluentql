@@ -1,5 +1,6 @@
+from typing import Any
+
 from .base_types import (
-    AnyType,
     BooleanType,
     NumberType,
     StringType,
@@ -26,8 +27,10 @@ from .function import (
     BitwiseOr,
     BitwiseXor,
     As,
-    Star,
     TableStar,
+    In,
+    Max,
+    Min,
 )
 
 
@@ -167,6 +170,36 @@ class Column(WithOperatorSupport, Referenceable):
         """
         return self._alias is not None
 
+    def isin(self, values):
+        """
+        Shorthand for In(self, values)
+
+        Args:
+            values (object):
+        
+        Returns:
+            In
+        """
+        return In(self, values)
+
+    def max(self):
+        """
+        Shorthand for Max(self)
+
+        Returns:
+            Max
+        """
+        return Max(self)
+
+    def min(self):
+        """
+        Shorthand for Min(self)
+
+        Returns:
+            Min
+        """
+        return Min(self)
+
     def _copy(self):
         """
         Create a new object bound to the same table instance
@@ -180,7 +213,7 @@ class Column(WithOperatorSupport, Referenceable):
         return type(self)(self.name, self.type).bind(self.table)
 
 
-class AnyColumn(Collection[AnyType], Column):
+class AnyColumn(Collection[Any], Column):
     pass
 
 
@@ -250,6 +283,16 @@ class Table(Referenceable):
             TableStar
         """
         return TableStar(self)
+
+    def alias(self, alias):
+        """
+        Args: 
+            alias (str):
+        
+        Returns:
+            As
+        """
+        return As(self, alias)
 
     @property
     def qualname(self):

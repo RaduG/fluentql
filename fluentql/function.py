@@ -1,6 +1,6 @@
 from typing import Any, TypeVar, Union
 
-from .base_types import AnyType, BooleanType, Collection, Referenceable
+from .base_types import BooleanType, StringType, Collection, Referenceable
 from .type_checking import validate_call_types
 
 
@@ -87,39 +87,42 @@ class F(Referenceable):
                 f"{cls.__name__} takes {len(cls.__args__)} arguments, {len(args)} given"
             )
         else:
-            validate_call_types(
-                cls.__name__, cls.__args__, [type(arg) for arg in args], True
-            )
+            # Replace F arg types with their return values
+            arg_types = [
+                type(arg).__returns__ if issubclass(type(arg), F) else type(arg)
+                for arg in args
+            ]
+            validate_call_types(cls.__name__, cls.__args__, arg_types, True)
 
 
 class Add(F):
-    a: Union[Constant, Collection[AnyType]]
-    b: Union[Constant, Collection[AnyType]]
-    returns: Union[Constant, Collection[AnyType]]
+    a: Union[Constant, Collection[Any]]
+    b: Union[Constant, Collection[Any]]
+    returns: Union[Constant, Collection[Any]]
 
 
 class Subtract(F):
-    a: Union[Constant, Collection[AnyType]]
-    b: Union[Constant, Collection[AnyType]]
-    returns: Union[Constant, Collection[AnyType]]
+    a: Union[Constant, Collection[Any]]
+    b: Union[Constant, Collection[Any]]
+    returns: Union[Constant, Collection[Any]]
 
 
 class Multiply(F):
-    a: Union[Constant, Collection[AnyType]]
-    b: Union[Constant, Collection[AnyType]]
-    returns: Union[Constant, Collection[AnyType]]
+    a: Union[Constant, Collection[Any]]
+    b: Union[Constant, Collection[Any]]
+    returns: Union[Constant, Collection[Any]]
 
 
 class Divide(F):
-    a: Union[Constant, Collection[AnyType]]
-    b: Union[Constant, Collection[AnyType]]
-    returns: Union[Constant, Collection[AnyType]]
+    a: Union[Constant, Collection[Any]]
+    b: Union[Constant, Collection[Any]]
+    returns: Union[Constant, Collection[Any]]
 
 
 class Modulo(F):
-    a: Union[Constant, Collection[AnyType]]
-    b: Union[Constant, Collection[AnyType]]
-    returns: Union[Constant, Collection[AnyType]]
+    a: Union[Constant, Collection[Any]]
+    b: Union[Constant, Collection[Any]]
+    returns: Union[Constant, Collection[Any]]
 
 
 class BitwiseOr(F):
@@ -141,39 +144,39 @@ class BitwiseXor(F):
 
 
 class Equals(F):
-    a: Union[Constant, Collection[AnyType]]
-    b: Union[Constant, Collection[AnyType]]
-    returns: Union[BooleanType, Collection[BooleanType]]
+    a: Union[Constant, Collection[Any]]
+    b: Union[Constant, Collection[Any]]
+    returns: Union[Collection[BooleanType], BooleanType]
 
 
 class LessThan(F):
-    a: Union[Constant, Collection[AnyType]]
-    b: Union[Constant, Collection[AnyType]]
-    returns: Union[BooleanType, Collection[BooleanType]]
+    a: Union[Constant, Collection[Any]]
+    b: Union[Constant, Collection[Any]]
+    returns: Union[Collection[BooleanType], BooleanType]
 
 
 class LessThanOrEqual(F):
-    a: Union[Constant, Collection[AnyType]]
-    b: Union[Constant, Collection[AnyType]]
-    returns: Union[BooleanType, Collection[BooleanType]]
+    a: Union[Constant, Collection[Any]]
+    b: Union[Constant, Collection[Any]]
+    returns: Union[Collection[BooleanType], BooleanType]
 
 
 class GreaterThan(F):
-    a: Union[Constant, Collection[AnyType]]
-    b: Union[Constant, Collection[AnyType]]
-    returns: Union[BooleanType, Collection[BooleanType]]
+    a: Union[Constant, Collection[Any]]
+    b: Union[Constant, Collection[Any]]
+    returns: Union[Collection[BooleanType], BooleanType]
 
 
 class GreaterThanOrEqual(F):
-    a: Union[Constant, Collection[AnyType]]
-    b: Union[Constant, Collection[AnyType]]
-    returns: Union[BooleanType, Collection[BooleanType]]
+    a: Union[Constant, Collection[Any]]
+    b: Union[Constant, Collection[Any]]
+    returns: Union[Collection[BooleanType], BooleanType]
 
 
 class NotEqual(F):
-    a: Union[Constant, Collection[AnyType]]
-    b: Union[Constant, Collection[AnyType]]
-    returns: Union[BooleanType, Collection[BooleanType]]
+    a: Union[Constant, Collection[Any]]
+    b: Union[Constant, Collection[Any]]
+    returns: Union[Collection[BooleanType], BooleanType]
 
 
 class As(F):
@@ -189,4 +192,26 @@ class TableStar(F):
 
 class Star(F):
     a: NoArgs
+    returns: Any
+
+
+class Like(F):
+    a: Collection[StringType]
+    b: str
+    returns: Union[Collection[BooleanType], BooleanType]
+
+
+class In(F):
+    a: Collection[Any]
+    b: Any
+    returns: Union[Collection[BooleanType], BooleanType]
+
+
+class Max(F):
+    a: Collection[Any]
+    returns: Any
+
+
+class Min(F):
+    a: Collection[Any]
     returns: Any

@@ -1,11 +1,17 @@
 from collections import defaultdict
-from typing import Any, Generic, TypeVar, Union
+import typing
+from typing import Any, TypeVar, Union
 
 
 def raise_type_error(parent_name, arg_name, expected_type, found_type):
+    try:
+        found_type_name = found_type.__name__
+    except AttributeError:
+        found_type_name = str(found_type)
+
     raise TypeError(
         f"Argument {arg_name} for {parent_name}: expected {str(expected_type)}, "
-        f"found {found_type.__name__}"
+        f"found {found_type_name}"
     )
 
 
@@ -96,7 +102,7 @@ def type_is_valid(given, expected):
         bool
     """
     # Any matches all
-    if expected is Any:
+    if expected is Any or given is Any:
         return True
 
     # First, try perfect match
@@ -199,7 +205,8 @@ def is_generic_subclass(given, expected):
 
 def is_generic(t):
     """
-    Checks if t is a subclass of typing.Generic.
+    Checks if t is a subclass of typing.Generic. The implementation
+    is done per Python version, as the typing module has changed over time.
 
     Args:
         t (type):
@@ -207,7 +214,17 @@ def is_generic(t):
     Returns:
         bool
     """
-    try:
-        return hasattr(t, "__origin__") and issubclass(t.__origin__, Generic)
-    except TypeError:
+    # Python 3.7
+    if hasattr(typing, "_GenericAlias"):
+        if isinstance(t, typing._GenericAlias):
+            return True
+        if isinstance(t, typing._SpecialForm):
+            return t not in (typing.Any,)
+
         return False
+    else:
+        # Python 3.6, 3.5
+        if isinstance(t, typing.GenericMeta):
+            return True
+
+    return False

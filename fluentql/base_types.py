@@ -1,8 +1,7 @@
 from datetime import date, datetime, time
 from numbers import Number
-from typing import Any, Generic, TypeVar, Union
+from typing import Generic, TypeVar, Union
 
-AnyType = Any
 StringType = str
 NumberType = Number
 BooleanType = bool
