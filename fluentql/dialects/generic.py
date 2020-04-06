@@ -138,6 +138,13 @@ class GenericSQLDialect(BaseDialect):
             query_components["where_keyword"] = self._get_keyword("WHERE")
             query_components["where"] = self.dispatch(query._where)
 
+        if query._group_by is not None:
+            q_template_components.append("{group_by_keyword}")
+            q_template_components.append("{group_by}")
+            query_components["group_by_keyword"] = self._get_keyword("GROUP_BY")
+            query_components["group_by"] = ", ".join(
+                [self.dispatch(c) for c in query._group_by]
+            )
         query_template = " ".join(q_template_components)
 
         return query_template.format(**query_components)

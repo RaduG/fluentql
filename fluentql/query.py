@@ -414,6 +414,32 @@ class Query:
 
         return self
 
+    def group_by(self, *columns):
+        """
+        Issue a Group By on a Select statement
+
+        Args:
+            *columns (Column): Columns to group by, in that order
+
+        Returns:
+            Query self
+        """
+        if self._command is not QueryCommands.SELECT:
+            raise QueryBuilderError("group_by can only be used with select statements")
+
+        if len(columns) == 0:
+            raise QueryBuilderError(
+                "group_by requires at least a target column, none provided"
+            )
+
+        if not all(isinstance(column, Column) for column in columns):
+            raise QueryBuilderError("group_by can only be used on Columns")
+
+        self._group_by = columns
+        # TODO: Check columns actually exist
+
+        return self
+
     def set_option(self, key, value):
         """
         Set an option by key
