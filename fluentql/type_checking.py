@@ -127,8 +127,11 @@ def type_is_valid(given, expected):
         matching_types = expected.__constraints__
 
         # If the TypeVar has type constraints, check against those. If there are none,
-        # the all() call will return True
-        if all(type_is_valid(given, t) for t in matching_types):
+        # return True
+        if len(matching_types):
+            if any(type_is_valid(given, t) for t in matching_types):
+                return True
+        else:
             return True
 
     # Is this a Union?
