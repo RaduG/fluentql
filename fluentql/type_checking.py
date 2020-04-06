@@ -1,4 +1,6 @@
 from collections import defaultdict
+from functools import reduce
+from itertools import combinations
 import typing
 from typing import Any, TypeVar, Union
 
@@ -38,34 +40,53 @@ def validate_call_types(parent_name, expected_types, args, raise_error=False):
     Returns:
         bool
     """
-    types_group = group_arg_types(expected_types)
+    matched_types = []
 
-    for t, indices in types_group.items():
+    for i, (given, expected) in enumerate(list(zip(args, expected_types))):
+        matched_type = get_type_match(given, expected)
+        if matched_type is None:
+            if raise_error:
+                raise_type_error(parent_name, i, expected, given)
+            return False
+
+        matched_types.append(matched_type)
+
+    # Group matched_types by their use of TypeVar
+    type_var_groups = group_by_typevar(matched_types)
+
+    for indices in type_var_groups.values():
+        if len(indices) == 1:
+            continue
+
+        group_matched_types = []
         for i in indices:
-            if not type_is_valid(args[i], t):
-                if raise_error:
-                    raise_type_error(parent_name, i, t, args[i])
-                else:
-                    return False
+            # First arg is "real" i, but we need the second number
+            # to decompose the given type
+            if isinstance(i, tuple):
+                i, j = i
+                given_generic_arg = get_generic_properties(args[i])[1][j]
+                group_matched_types.append(given_generic_arg)
+            else:
+                group_matched_types.append(args[i])
 
-        # Now we need to look at groups, specifically for TypeVars
-        if isinstance(t, TypeVar) and len(indices) > 1:
-            # All TypeVars must strictly match by type or be subtypes of each other
-            if not all(
-                type_is_valid(args[indices[0]], args[indices[i]])
-                or type_is_valid(args[indices[i]], args[indices[0]])
-                for i in indices[1:]
-            ):
-                if raise_error:
-                    raise_generic_type_mismatch(
-                        parent_name, indices, [type(args[i]) for i in indices]
-                    )
-                else:
-                    return False
+        type_vars_match = reduce(
+            lambda a, ts: (
+                a and (type_is_valid(ts[0], ts[1]) or type_is_valid(ts[1], ts[0]))
+            ),
+            combinations(group_matched_types, 2),
+            True,
+        )
+
+        if not type_vars_match:
+            if raise_error:
+                raise_generic_type_mismatch(parent_name, indices, group_matched_types)
+            else:
+                return False
+
     return True
 
 
-def group_arg_types(types):
+def group_by_typevar(types):
     """
     Convers a list of arg types to a dict where types are keys
     and the values are the indices in types where a specific type
@@ -77,15 +98,84 @@ def group_arg_types(types):
     Returns:
         dict
     """
-    # Create a copy of types
-    types = list(types)
-
-    types_group = defaultdict(lambda: [])
+    type_var_groups = defaultdict(lambda: [])
 
     for i, t in enumerate(types):
-        types_group[t].append(i)
+        if is_type_var(t):
+            type_var_groups[t].append(i)
+        elif is_generic(t):
+            # Extract args
+            args = t.__args__
 
-    return dict(types_group)
+            for j, arg in enumerate(args):
+                if is_type_var(arg):
+                    # i-th argument of the function, j-th generic arg
+                    type_var_groups[arg].append((i, j))
+
+    return dict(type_var_groups)
+
+
+def get_type_match(given, expected):
+    """
+    Get the type in expected for which given is a
+    match. Returns None if there is no match.
+
+    Args:
+        given (type):
+        expected (type):
+    
+    Returns:
+        type or None
+    """
+    # Any matches all
+    if expected is Any or given is Any:
+        return given
+
+    # First, try perfect match
+    if given is expected:
+        return given
+
+    # Try nicer ways for non-Type variables
+    try:
+        # Then, try subclass
+        if issubclass(given, expected):
+            return given
+
+        # Then, try isinstance
+        if isinstance(given, expected):
+            return given
+
+    except TypeError:
+        pass
+
+    # Is this a TypeVar?
+    if is_type_var(expected):
+        matching_types = expected.__constraints__
+
+        # If the TypeVar has type constraints, check against those. If there are none,
+        # return True
+        if len(matching_types):
+            if any(type_is_valid(given, t) for t in matching_types):
+                return expected
+        else:
+            return expected
+
+    # Is this a Union?
+    if is_union(expected):
+        matching_types = expected.__args__
+
+        # Get the types part of Union and check against those
+        for t in matching_types:
+            type_match = get_type_match(given, t)
+            if type_match is not None:
+                return t
+
+    # Is this a Generic?
+    if is_generic(expected):
+        if is_generic_subclass(given, expected):
+            return expected
+
+    return None
 
 
 def type_is_valid(given, expected):
@@ -101,59 +191,39 @@ def type_is_valid(given, expected):
     Returns:
         bool
     """
-    # Any matches all
-    if expected is Any or given is Any:
-        return True
+    return get_type_match(given, expected) is not None
 
-    # First, try perfect match
-    if given is expected:
-        return True
 
-    # Try nicer ways for non-Type variables
-    try:
-        # Then, try subclass
-        if issubclass(given, expected):
-            return True
+def get_generic_properties(t):
+    """
+    Extract the base and args of t, assumed to be
+    an instance of a typing.Generic subclass. This function 
+    will only look at the first instance of a Generic instance
+    in the mro, from right to left.
 
-        # Then, try isinstance
-        if isinstance(given, expected):
-            return True
+    Args:
+        t (type)
+    
+    Returns:
+        tuple(type, tuple(*type)), where the first
+            element is the base and the second element
+            is the list of args.
+    """
+    bases = t.__orig_bases__
 
-    except TypeError:
-        pass
+    for base in reversed(bases):
+        if is_generic(base) and base.__args__ is not None:
+            break
+    else:
+        raise TypeError(f"Type {t} is not a subclass of Generic")
 
-    # Is this a TypeVar?
-    if isinstance(expected, TypeVar):
-        matching_types = expected.__constraints__
-
-        # If the TypeVar has type constraints, check against those. If there are none,
-        # return True
-        if len(matching_types):
-            if any(type_is_valid(given, t) for t in matching_types):
-                return True
-        else:
-            return True
-
-    # Is this a Union?
-    if hasattr(expected, "__origin__") and expected.__origin__ is Union:
-        matching_types = expected.__args__
-
-        # Get the types part of Union and check against those
-        if any(type_is_valid(given, t) for t in matching_types):
-            return True
-
-    # Is this a Generic?
-    if is_generic(expected):
-        if is_generic_subclass(given, expected):
-            return True
-
-    return False
+    return base.__origin__, base.__args__
 
 
 def is_generic_subclass(given, expected):
     """
     Checks if given implements expected, which is assumed to be
-    a subclass of typing.Generic. The validation is done down to
+    a subclass of a typing.Generic instance. The validation is done down to
     the generic type level (__args__), and given's args must be
     subtypes of expected's args.
 
@@ -231,3 +301,29 @@ def is_generic(t):
             return True
 
     return False
+
+
+def is_type_var(t):
+    """
+    Checks if t is a typing.TypeVar
+
+    Args:
+        t (type):
+    
+    Returns:
+        bool
+    """
+    return isinstance(t, TypeVar)
+
+
+def is_union(t):
+    """
+    Checks if t is a typing.Union
+
+    Args:
+        t (type):
+    
+    Returns:
+        bool
+    """
+    return hasattr(t, "__origin__") and t.__origin__ is Union
