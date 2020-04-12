@@ -257,10 +257,8 @@ def get_type_match(given, expected):
         type or None
     """
     # Any matches all
-    if expected is Any:
-        return given
-    if given is Any:
-        return expected
+    if expected is Any or given is Any:
+        return Any
 
     # First, try perfect match
     if given is expected:

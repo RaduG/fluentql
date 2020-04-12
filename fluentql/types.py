@@ -31,6 +31,7 @@ from .function import (
     In,
     Max,
     Min,
+    Like,
 )
 
 
@@ -199,6 +200,15 @@ class Column(WithOperatorSupport, Referenceable):
             Min
         """
         return Min(self)
+
+    def like(self, pattern):
+        """
+        Shorthand for Like(self, pattern)
+
+        Returns:
+            Like
+        """
+        return Like(self, pattern)
 
     def _copy(self):
         """

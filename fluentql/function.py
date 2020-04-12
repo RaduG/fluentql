@@ -151,7 +151,7 @@ class BooleanF(F):
         Returns:
             type
         """
-        if any(issubclass(Collection, t) for t in matched_types):
+        if any(issubclass(t, Collection) for t in matched_types):
             return Collection[BooleanType]
 
         return Collection[BooleanType]
