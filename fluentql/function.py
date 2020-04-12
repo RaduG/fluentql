@@ -1,10 +1,10 @@
 from typing import Any, TypeVar, Union
+from types import MethodType, FunctionType
 
-from .base_types import BooleanType, StringType, Collection, Referenceable
-from .type_checking import validate_call_types
+from .base_types import BooleanType, Constant, StringType, Collection, Referenceable
+from .type_checking import TypeChecker
 
 
-Constant = TypeVar("Constant")
 AnyArgs = TypeVar("AnyArgs")
 NoArgs = TypeVar("NoArgs")
 VarArgs = TypeVar("VarArgs")
@@ -41,6 +41,8 @@ class F(Referenceable):
         # Check for "returns"
         if "returns" in annotations:
             cls.__returns__ = annotations.pop("returns")
+        elif hasattr(cls, "returns"):
+            cls.__returns__ = cls.returns
         else:
             cls.__returns__ = Any
 
@@ -54,6 +56,20 @@ class F(Referenceable):
     def __init__(self, *args):
         self._validate_args(args)
         self.__values__ = args
+
+        self.__returns__ = self._get_return_type()
+
+    def _get_return_type(self):
+        # If __returns__ is a function, the result of it called
+        # on args is the actual return type
+        if isinstance(self.__returns__, (FunctionType, MethodType)):
+            # Replace F arg types with their return values
+            return self.__returns__(
+                tuple(self.__type_checker__._matched_types),
+                self.__type_checker__._type_var_mapping,
+            )
+
+        return self.__returns__
 
     @property
     def values(self):
@@ -72,111 +88,147 @@ class F(Referenceable):
         """
         return type(name, (cls,), {})
 
-    @classmethod
-    def _validate_args(cls, args):
-        if cls.__args__ is AnyArgs:
+    def _validate_args(self, args):
+        if self.__args__ is AnyArgs:
             if len(args) == 0:
-                raise TypeError(f"{cls.__name__} takes at least one argument")
+                raise TypeError(f"{type(self).__name__} takes at least one argument")
 
-        elif cls.__args__ is NoArgs:
+            # All expected args are Any
+            arg_types = [Any] * len(args)
+
+        elif self.__args__ is NoArgs:
             if len(args) > 0:
-                raise TypeError(f"{cls.__name__} takes no arguments")
+                raise TypeError(f"{type(self).__name__} takes no arguments")
 
-        elif len(cls.__args__) != len(args):
+            return
+
+        elif len(self.__args__) != len(args):
             raise TypeError(
-                f"{cls.__name__} takes {len(cls.__args__)} arguments, {len(args)} given"
+                f"{type(self).__name__} takes {len(self.__args__)} arguments, {len(args)} given"
             )
         else:
             # Replace F arg types with their return values
             arg_types = [
-                type(arg).__returns__ if issubclass(type(arg), F) else type(arg)
+                arg.__returns__ if issubclass(type(arg), F) else type(arg)
                 for arg in args
             ]
-            validate_call_types(cls.__name__, cls.__args__, arg_types, True)
+
+        self.__type_checker__ = TypeChecker(arg_types, self.__args__)
+        self.__type_checker__.validate()
 
 
-class Add(F):
+class ArithmeticF(F):
+    @classmethod
+    def returns(cls, matched_types, type_var_mapping):
+        """
+        If both args are Constant, the return value is Constant.
+        Otherwise, the return value is Collection.
+
+        Args:
+            args (list(type)): Argument types, in order
+        
+        Returns:
+            type
+        """
+        constant_type = type_var_mapping[Constant][1]
+
+        if any(issubclass(t, Collection) for t in matched_types):
+            return Collection[constant_type]
+
+        return constant_type
+
+
+class BooleanF(F):
+    @classmethod
+    def returns(cls, matched_types, type_var_mapping):
+        """
+        If both args are BooleanType, the return value is BooleanType.
+        Otherwise, the return value is collection.
+
+        Args:
+            args (list(type)): Argument types, in order
+        
+        Returns:
+            type
+        """
+        if any(issubclass(Collection, t) for t in matched_types):
+            return Collection[BooleanType]
+
+        return Collection[BooleanType]
+
+
+class ComparisonF(F):
+    pass
+
+
+class Add(ArithmeticF):
+    a: Union[Constant, Collection[Constant]]
+    b: Union[Constant, Collection[Constant]]
+
+
+class Subtract(ArithmeticF):
     a: Union[Constant, Collection[Any]]
     b: Union[Constant, Collection[Any]]
-    returns: Union[Constant, Collection[Any]]
 
 
-class Subtract(F):
+class Multiply(ArithmeticF):
     a: Union[Constant, Collection[Any]]
     b: Union[Constant, Collection[Any]]
-    returns: Union[Constant, Collection[Any]]
 
 
-class Multiply(F):
+class Divide(ArithmeticF):
     a: Union[Constant, Collection[Any]]
     b: Union[Constant, Collection[Any]]
-    returns: Union[Constant, Collection[Any]]
 
 
-class Divide(F):
+class Modulo(ArithmeticF):
     a: Union[Constant, Collection[Any]]
     b: Union[Constant, Collection[Any]]
-    returns: Union[Constant, Collection[Any]]
 
 
-class Modulo(F):
-    a: Union[Constant, Collection[Any]]
-    b: Union[Constant, Collection[Any]]
-    returns: Union[Constant, Collection[Any]]
-
-
-class BitwiseOr(F):
+class BitwiseOr(BooleanF):
     a: Union[Collection[BooleanType], BooleanType]
     b: Union[Collection[BooleanType], BooleanType]
-    returns: Union[Collection[BooleanType], BooleanType]
 
 
-class BitwiseAnd(F):
+class BitwiseAnd(BooleanF):
     a: Union[Collection[BooleanType], BooleanType]
     b: Union[Collection[BooleanType], BooleanType]
-    returns: Union[Collection[BooleanType], BooleanType]
 
 
-class BitwiseXor(F):
+class BitwiseXor(BooleanF):
     a: Union[Collection[BooleanType], BooleanType]
     b: Union[Collection[BooleanType], BooleanType]
-    returns: Union[Collection[BooleanType], BooleanType]
 
 
-class Equals(F):
+class Equals(BooleanF):
+    a: Union[Constant, Collection[Constant]]
+    b: Union[Constant, Collection[Constant]]
+
+
+class LessThan(BooleanF):
     a: Union[Constant, Collection[Any]]
     b: Union[Constant, Collection[Any]]
-    returns: Union[Collection[BooleanType], BooleanType]
 
 
-class LessThan(F):
+class LessThanOrEqual(BooleanF):
     a: Union[Constant, Collection[Any]]
     b: Union[Constant, Collection[Any]]
-    returns: Union[Collection[BooleanType], BooleanType]
 
 
-class LessThanOrEqual(F):
+class GreaterThan(BooleanF):
     a: Union[Constant, Collection[Any]]
     b: Union[Constant, Collection[Any]]
-    returns: Union[Collection[BooleanType], BooleanType]
 
 
-class GreaterThan(F):
+class GreaterThanOrEqual(BooleanF):
     a: Union[Constant, Collection[Any]]
     b: Union[Constant, Collection[Any]]
-    returns: Union[Collection[BooleanType], BooleanType]
 
 
-class GreaterThanOrEqual(F):
+class NotEqual(BooleanF):
     a: Union[Constant, Collection[Any]]
     b: Union[Constant, Collection[Any]]
-    returns: Union[Collection[BooleanType], BooleanType]
-
-
-class NotEqual(F):
-    a: Union[Constant, Collection[Any]]
-    b: Union[Constant, Collection[Any]]
-    returns: Union[Collection[BooleanType], BooleanType]
 
 
 class As(F):
@@ -195,23 +247,27 @@ class Star(F):
     returns: Any
 
 
-class Like(F):
+class Like(BooleanF):
     a: Collection[StringType]
     b: str
-    returns: Union[Collection[BooleanType], BooleanType]
 
 
-class In(F):
+class In(BooleanF):
     a: Collection[Any]
     b: Any
-    returns: Union[Collection[BooleanType], BooleanType]
 
 
 class Max(F):
-    a: Collection[Any]
-    returns: Any
+    a: Collection[Constant]
+
+    @classmethod
+    def returns(cls, matched_types, type_var_mapping):
+        return type_var_mapping[Constant][1]
 
 
 class Min(F):
-    a: Collection[Any]
-    returns: Any
+    a: Collection[Constant]
+
+    @classmethod
+    def returns(cls, matched_types, type_var_mapping):
+        return type_var_mapping[Constant][1]

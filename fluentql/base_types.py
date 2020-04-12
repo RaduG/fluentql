@@ -9,6 +9,16 @@ DateTimeType = datetime
 TimeType = time
 DateType = Union[DateTimeType, date]
 NullType = type(None)
+Constant = TypeVar(
+    "Constant",
+    StringType,
+    NumberType,
+    BooleanType,
+    DateTimeType,
+    TimeType,
+    DateType,
+    NullType,
+)
 
 
 T = TypeVar("T")
