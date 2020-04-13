@@ -12,31 +12,16 @@ from .base_types import (
 )
 
 from .function import (
-    Add,
     As,
     Asc,
-    BitwiseAnd,
-    BitwiseOr,
-    BitwiseXor,
     Desc,
-    Divide,
-    Equals,
-    GreaterThan,
-    GreaterThanOrEqual,
     In,
-    LessThan,
-    LessThanOrEqual,
     Like,
     Max,
     Min,
-    Modulo,
-    Multiply,
-    Not,
-    NotEqual,
-    Subtract,
     Sum,
     TableStar,
-    WithOperatorSupport
+    WithOperatorSupport,
 )
 
 
@@ -221,6 +206,7 @@ class Table(Referenceable):
         """
         self.name = name
         self.db = db
+        self._process_annotations()
 
     def column(self, name):
         """
@@ -271,7 +257,7 @@ class Table(Referenceable):
         return f"{self.db}.{self.name}"
 
     @property
-    def is_types(self):
+    def is_typed(self):
         return self.__columns__ is not None
 
     @property
@@ -280,6 +266,31 @@ class Table(Referenceable):
             return dict(self.__columns__)
 
         return None
+
+    def _process_annotations(self):
+        """
+        Processes class annotations and creates Column instances
+        bound to the current instance.
+        """
+        if not hasattr(self, "__annotations__"):
+            return
+
+        annotations = dict(self.__annotations__)
+
+        if not all(issubclass(t, Column) for t in annotations.values()):
+            raise TypeError("Table column types must be subclasses of Column")
+
+        columns = {}
+
+        for name, column_type in annotations.items():
+            if not issubclass(column_type, Column):
+                raise TypeError(
+                    f"Table column types must be subclasses of Column, {column_type} found"
+                )
+
+            columns[name] = column_type(name).bind(self)
+
+        self.__columns__ = columns
 
     def __getitem__(self, name):
         """
