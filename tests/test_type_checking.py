@@ -1,4 +1,5 @@
 from typing import Any, Generic, Union, TypeVar
+from types import new_class
 
 import pytest
 
@@ -23,7 +24,7 @@ def subclass(t, name):
     Returns:
         type
     """
-    return type(name, (t,), {})
+    return new_class(name, (t,), {})
 
 
 class GenericType(Generic[T]):
