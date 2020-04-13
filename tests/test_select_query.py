@@ -1,8 +1,7 @@
 import pytest
 
-from fluentql.dialects.generic import GenericSQLDialect
+from fluentql import GenericSQLDialect, Q
 from fluentql.errors import CompilationError, QueryBuilderError
-from fluentql.query import Query as Q
 from fluentql.types import Table
 
 
