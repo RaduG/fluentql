@@ -14,8 +14,8 @@ T = TypeVar("T")
 class F(Referenceable):
     def __init_subclass__(cls, **kwargs):
         """
-        Use init_subclass to map the arguments / return value based
-        on type annotations, instead of going hard at it with a metaclass
+        Use init_subclass to map the arguments / return value based on type
+        annotations, instead of going hard at it with a metaclass.
 
         Args:
             cls (type):
@@ -26,8 +26,9 @@ class F(Referenceable):
     @classmethod
     def _process_annotations(cls):
         """
-        Set __args__ and __returns__ attributes to cls. Those will be set
-        to the user annotations, if any, or will default to:
+        Set __args__ and __returns__ attributes to cls. Those will be set to
+        the user annotations, if any, or will default to:
+
         AnyArgs - for __args__
         Any - for __returns__
 
@@ -83,7 +84,7 @@ class F(Referenceable):
 
         Args:
             name (str):
-        
+
         Returns:
             type
         """
@@ -122,12 +123,12 @@ class ArithmeticF(F):
     @classmethod
     def returns(cls, matched_types, type_var_mapping):
         """
-        If both args are Constant, the return value is Constant.
-        Otherwise, the return value is Collection.
+        If both args are Constant, the return value is Constant. Otherwise, the
+        return value is Collection.
 
         Args:
             args (list(type)): Argument types, in order
-        
+
         Returns:
             type
         """
@@ -148,7 +149,7 @@ class BooleanF(F):
 
         Args:
             args (list(type)): Argument types, in order
-        
+
         Returns:
             type
         """

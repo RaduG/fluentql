@@ -11,8 +11,7 @@ class TypeCheckingError(Exception):
 class TypeChecker:
     def __init__(self, given, expected):
         """
-        Raises ValueError if given and expected don't have the
-        same lengths.
+        Raises ValueError if given and expected don't have the same lengths.
 
         Args:
             given (type|tuple(type)): Types to validate
@@ -80,13 +79,13 @@ def raise_generic_type_mismatch(parent_name, arg_names, found_types):
 
 def apply_type_var_mapping(mapping, matched_types):
     """
-    Applies a type var mapping, as returned by resolve_type_vars,
-    to a given list of types. Returns the resulting list.
-    
+    Applies a type var mapping, as returned by resolve_type_vars, to a given
+    list of types. Returns the resulting list.
+
     Args:
         mapping (dict):
         matched_types (list(type)):
-    
+
     Returns:
         list(type)
     """
@@ -105,16 +104,16 @@ def apply_type_var_mapping(mapping, matched_types):
 
 def resolve_type_vars(given_types, matched_types):
     """
-    Resolves TypeVar to concrete types and returns a dict of
-    mappings from TypeVar to the concrete type, as well as a list
-    of indices of TypeVar occurances in given_types and matched_types.
+    Resolves TypeVar to concrete types and returns a dict of mappings from
+    TypeVar to the concrete type, as well as a list of indices of TypeVar
+    occurances in given_types and matched_types.
 
     Args:
         given_types (list(type)): Given types, as provided, for example,
             in a function call.
         matched_types (list(type)): Types of the argument matching, as returned by
             get_type_match, for given_types.
-    
+
     Returns:
         dict(TypeVar, Tuple(list, type)):
             Values are tuples, where the first element is a list of indices
@@ -145,13 +144,13 @@ def resolve_type_vars(given_types, matched_types):
 
 def find_type_match(given, expected):
     """
-    Find a type match in expected (list of eligible types) for given.
-    Returns None if there is no match.
+    Find a type match in expected (list of eligible types) for given. Returns
+    None if there is no match.
 
     Args:
         given (type):
         expected (list(type)):
-    
+
     Returns:
         type or None
     """
@@ -164,14 +163,14 @@ def find_type_match(given, expected):
 
 def resolve_type_var(type_var, given_types, matched_types):
     """
-    Resolves TypeVars to a concrete type and returns those types. Returns
-    None if the validation fails.
+    Resolves TypeVars to a concrete type and returns those types. Returns None
+    if the validation fails.
 
     Args:
         given_types (list(type)): Types of given arguments
         matched_types (list(type)): Types matched to the given_type, as returned
             by get_type_match
-    
+
     Returns:
         list(type) or None
     """
@@ -211,13 +210,13 @@ def resolve_type_var(type_var, given_types, matched_types):
 
 def get_typevar_groups(types):
     """
-    Convers a list of arg types to a dict where types are keys
-    and the values are the indices in types where a specific type
-    was found. This is required in order to process TypeVars.
+    Convers a list of arg types to a dict where types are keys and the values
+    are the indices in types where a specific type was found. This is required
+    in order to process TypeVars.
 
     Args:
         types (list(type)):
-    
+
     Returns:
         dict
     """
@@ -238,6 +237,7 @@ def get_typevar_groups(types):
 def get_type_match(given, expected):
     """
     Get type in expected that given matched to::
+
         - if given is Any, expected is returned
         - if expected is Any, given is returned
         - if given is a subclass/instance of expected, it is returned
@@ -252,7 +252,7 @@ def get_type_match(given, expected):
     Args:
         given (type):
         expected (type):
-    
+
     Returns:
         type or None
     """
@@ -313,14 +313,13 @@ def get_type_match(given, expected):
 
 def type_is_valid(given, expected):
     """
-    Checks if the given type matches the expected. Will perform
-    some validation for types in the typing module, including TypeVar and Union,
-    but not all.
+    Checks if the given type matches the expected. Will perform some validation
+    for types in the typing module, including TypeVar and Union, but not all.
 
     Args:
         given (type):
         expected (type):
-    
+
     Returns:
         bool
     """
@@ -329,14 +328,13 @@ def type_is_valid(given, expected):
 
 def get_generic_properties(t):
     """
-    Extract the base and args of t, assumed to be
-    an instance of a typing.Generic subclass. This function 
-    will only look at the first instance of a Generic instance
-    in the mro, from right to left.
+    Extract the base and args of t, assumed to be an instance of a
+    typing.Generic subclass. This function will only look at the first instance
+    of a Generic instance in the mro, from right to left.
 
     Args:
         t (type)
-    
+
     Returns:
         tuple(type, tuple(*type)), where the first
             element is the base and the second element
@@ -356,6 +354,7 @@ def get_generic_properties(t):
 def get_generic_type_match(given, expected):
     """
     Compares two typing.Generic types, given and expected, and returns:
+
         - instance of generic base with the actual matched arguments, as returned
         by get_matched_type
         - None if the given doesn't match expected
@@ -365,7 +364,7 @@ def get_generic_type_match(given, expected):
     Args:
         given (type):
         expected (Generic):
-    
+
     Returns:
         bool
     """
@@ -413,12 +412,12 @@ def get_generic_type_match(given, expected):
 
 def is_generic(t):
     """
-    Checks if t is a subclass of typing.Generic. The implementation
-    is done per Python version, as the typing module has changed over time.
+    Checks if t is a subclass of typing.Generic. The implementation is done per
+    Python version, as the typing module has changed over time.
 
     Args:
         t (type):
-    
+
     Returns:
         bool
     """
@@ -440,11 +439,11 @@ def is_generic(t):
 
 def is_type_var(t):
     """
-    Checks if t is a typing.TypeVar
+    Checks if t is a typing.TypeVar.
 
     Args:
         t (type):
-    
+
     Returns:
         bool
     """
@@ -453,11 +452,11 @@ def is_type_var(t):
 
 def is_union(t):
     """
-    Checks if t is a typing.Union
+    Checks if t is a typing.Union.
 
     Args:
         t (type):
-    
+
     Returns:
         bool
     """
@@ -466,12 +465,12 @@ def is_union(t):
 
 def greatest_common_superclass(*types):
     """
-    Finds the greatest common superclass of the given *types.
-    Returns None if the types are unrelated.
+    Finds the greatest common superclass of the given *types. Returns None if
+    the types are unrelated.
 
     Args:
         *types (type):
-    
+
     Returns:
         type or None
     """

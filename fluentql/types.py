@@ -38,7 +38,7 @@ from .function import (
 
 class WithOperatorSupport:
     """
-    Implements operator support
+    Implements operator support.
     """
 
     def __gt__(self, other):
@@ -123,12 +123,12 @@ class Column(WithOperatorSupport, Referenceable):
 
     def alias(self, name):
         """
-        Returns a copy of the current object with the alias
-        property set to name.
+        Returns a copy of the current object with the alias property set to
+        name.
 
         Args:
             name (str): Name to alias to
-        
+
         Returns:
             Column
         """
@@ -136,11 +136,11 @@ class Column(WithOperatorSupport, Referenceable):
 
     def bind(self, table):
         """
-        Bind column to a table
+        Bind column to a table.
 
         Args:
             table (Table):
-        
+
         Returns:
             Column self
         """
@@ -149,12 +149,12 @@ class Column(WithOperatorSupport, Referenceable):
 
     def equals(self, other):
         """
-        Compare two Column instances. Two columns are identical when they
-        point to the same Table object, have the same name and have the same type.
+        Compare two Column instances. Two columns are identical when they point
+        to the same Table object, have the same name and have the same type.
 
         Args:
             other (Column):
-        
+
         Returns:
             bool
         """
@@ -181,7 +181,7 @@ class Column(WithOperatorSupport, Referenceable):
 
         Args:
             values (object):
-        
+
         Returns:
             In
         """
@@ -216,10 +216,9 @@ class Column(WithOperatorSupport, Referenceable):
 
     def _copy(self):
         """
-        Create a new object bound to the same table instance
-        and column name and of the same type. Useful to implement column aliases.
-        The new instance will be equal (as per __eq__) to the
-        current instance.
+        Create a new object bound to the same table instance and column name
+        and of the same type. Useful to implement column aliases. The new
+        instance will be equal (as per __eq__) to the current instance.
 
         Returns:
             Column
@@ -271,14 +270,14 @@ class Table(Referenceable):
         """
         Returns a Column object for a given column name.
 
-        If the Table has a defined schema, this will raise a 
+        If the Table has a defined schema, this will raise a
         TODO: create error
         error if the column does not exist in the schema. Otherwise,
         a new instance of Column is created, with type AnyColumn.
 
         Args:
             name (str): Column name
-        
+
         Returns
             Column
         """
@@ -289,9 +288,9 @@ class Table(Referenceable):
 
     def all(self):
         """
-        To be used when all the columns in a table need to be referenced.
-        This returns an instance of Column named "*" bound to the table,
-        which when compiled yields tablename.*
+        To be used when all the columns in a table need to be referenced. This
+        returns an instance of Column named "*" bound to the table, which when
+        compiled yields tablename.*
 
         Returns:
             TableStar
@@ -321,7 +320,7 @@ class Table(Referenceable):
 
         Args:
             name (str): Column name
-        
+
         Returns:
             Column
         """

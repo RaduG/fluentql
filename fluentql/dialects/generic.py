@@ -83,11 +83,11 @@ class GenericSQLDialect(BaseDialect):
 
     def compile(self, query):
         """
-        Add QUERY END at the end
+        Add QUERY END at the end.
 
         Args:
             query (Query):
-        
+
         Returns:
             str
         """
@@ -99,11 +99,11 @@ class GenericSQLDialect(BaseDialect):
 
     def compile_select_query(self, query):
         """
-        Compile a select query
+        Compile a select query.
 
         Args:
             query (Query):
-        
+
         Returns:
             str
         """
@@ -156,12 +156,11 @@ class GenericSQLDialect(BaseDialect):
 
     def compile_as_function(self, f):
         """
-        Compiles as: 
-            dispatch(values[0]) AS dispatch(values[1])
-        
+        Compiles as: dispatch(values[0]) AS dispatch(values[1])
+
         Args:
             f (As):
-        
+
         Returns:
             str
         """
@@ -228,14 +227,13 @@ class GenericSQLDialect(BaseDialect):
 
     def compile_infix_function(self, f, name=None):
         """
-        Compiles a function with 2 arguments as:
-            dispatch(values[0]) NAME dispatch(values[1]).
-        If name is not given, the function name is used.
+        Compiles a function with 2 arguments as: dispatch(values[0]) NAME
+        dispatch(values[1]). If name is not given, the function name is used.
 
         Args:
             f (F):
             name (str): Defaults to None
-        
+
         Returns:
             str
         """
@@ -257,11 +255,11 @@ class GenericSQLDialect(BaseDialect):
 
     def compile_join_query(self, join):
         """
-        Compile a join query
+        Compile a join query.
 
         Args:
             join (Query): join Query
-        
+
         Returns:
             str
         """
@@ -297,11 +295,11 @@ class GenericSQLDialect(BaseDialect):
 
     def compile_constant(self, val):
         """
-        Calls str() on given value object
+        Calls str() on given value object.
 
         Args:
             val (object):
-        
+
         Returns:
             str
         """
@@ -309,11 +307,11 @@ class GenericSQLDialect(BaseDialect):
 
     def compile_str_constant(self, val):
         """
-        Wraps a string in quotes
+        Wraps a string in quotes.
 
         Args:
             val (str):
-        
+
         Returns:
             str
         """
@@ -322,11 +320,11 @@ class GenericSQLDialect(BaseDialect):
 
     def compile_bool_constant(self, val):
         """
-        Returns the dialect name for the boolean values
+        Returns the dialect name for the boolean values.
 
         Args:
             val (bool):
-        
+
         Returns:
             str
         """
@@ -341,7 +339,7 @@ class GenericSQLDialect(BaseDialect):
 
         Args:
             val (NoneType):
-        
+
         Returns:
             str
         """
@@ -349,11 +347,11 @@ class GenericSQLDialect(BaseDialect):
 
     def compile_function(self, f):
         """
-        Last resort compile method for functions
+        Last resort compile method for functions.
 
         Args:
             function (F):
-        
+
         Returns:
             str
         """

@@ -19,11 +19,11 @@ class BaseDialect:
 
     def dispatch(self, o):
         """
-        Dispatch to appropriate function
+        Dispatch to appropriate function.
 
         Args:
             o (object):
-        
+
         Returns:
             str
         """
@@ -63,11 +63,11 @@ class BaseDialect:
 
     def compile(self, query):
         """
-        Compile a given query
+        Compile a given query.
 
         Args:
             query (Query):
-        
+
         Returns:
             str
         """
@@ -75,7 +75,7 @@ class BaseDialect:
 
     def _get_option(self, name):
         """
-        Get a dialect option by name
+        Get a dialect option by name.
 
         Args:
             name (str):
@@ -87,11 +87,11 @@ class BaseDialect:
 
     def _has_option(self, name):
         """
-        Check if a given option is set
+        Check if a given option is set.
 
         Args:
             name (str):
-        
+
         Returns:
             bool
         """
@@ -103,7 +103,7 @@ class BaseDialect:
 
         Args:
             name (str): Keyword name
-        
+
         Returns:
             str
         """

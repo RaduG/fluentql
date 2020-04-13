@@ -56,7 +56,7 @@ class Query:
         Args:
             dialect_cls (type): Implementation of BaseDialect
             **user_options: Options to be passed to the dialect constructor
-        
+
         Returns:
             str
         """
@@ -100,12 +100,11 @@ class Query:
 
     def from_(self, target):
         """
-        Set main target for the query. The list of targets must
-        be empty.
+        Set main target for the query. The list of targets must be empty.
 
         Args:
             target (Table): Query target
-        
+
         Returns:
             Query self
         """
@@ -122,7 +121,7 @@ class Query:
 
         Args:
             target (Table): Query target
-        
+
         Returns:
             Query self
         """
@@ -166,8 +165,8 @@ class Query:
 
     def and_where(self, condition):
         """
-        Alias for where(condition, boolean=And). Equivalent
-        to a generic where call, but more explicit.
+        Alias for where(condition, boolean=And). Equivalent to a generic where
+        call, but more explicit.
 
         condition (F|callable):
             - If a Column object is given, the name and bound table
@@ -211,7 +210,7 @@ class Query:
 
     def join(self, target, on, how="inner"):
         """
-        Add a join clause to a query
+        Add a join clause to a query.
 
         Args:
             target (Table):
@@ -312,7 +311,7 @@ class Query:
 
         Args:
             target (Table):
-        
+
         Returns:
             Query self
         """
@@ -320,8 +319,7 @@ class Query:
 
     def on(self, condition, boolean=BitwiseAnd):
         """
-        On clause for a join. Only available for ON command
-        subqueries.
+        On clause for a join. Only available for ON command subqueries.
 
         Args:
             left (Column|F|callable|object): Left hand side of the boolean
@@ -329,7 +327,7 @@ class Query:
             op (str): Operator to use.
             right (Column|F|object): Right hand side of the boolean expression.
                 Can be a Column, a Function or a constant.
-        
+
         Returns:
             Query self
         """
@@ -366,7 +364,7 @@ class Query:
             op (str): Operator to use.
             right (Column|F|object): Right hand side of the boolean expression.
                 Can be a Column, a Function or a constant.
-        
+
         Returns:
             Query self
         """
@@ -382,7 +380,7 @@ class Query:
             op (str): Operator to use.
             right (Column|F|object): Right hand side of the boolean expression.
                 Can be a Column, a Function or a constant.
-        
+
         Returns:
             Query self
         """
@@ -390,12 +388,13 @@ class Query:
 
     def using(self, column_name):
         """
-        Using clause for a join. Can only be used in a Join sub-query if
+        Using clause for a join. Can only be used in a Join sub-query if.
+
         .on has not been used
-        
+
         Args:
             column_name (str): Column name to use for the join
-        
+
         Returns:
             Query self
         """
@@ -417,7 +416,7 @@ class Query:
 
     def group_by(self, *columns):
         """
-        Issue a Group By on a Select statement
+        Issue a Group By on a Select statement.
 
         Args:
             *columns (Column): Columns to group by, in that order
@@ -443,7 +442,7 @@ class Query:
 
     def set_option(self, key, value):
         """
-        Set an option by key
+        Set an option by key.
 
         Args:
             key (str):
@@ -457,7 +456,7 @@ class Query:
 
         Args:
             key (str):
-        
+
         Returns:
             bool
         """
@@ -465,12 +464,12 @@ class Query:
 
     def get_option(self, key):
         """
-        Gets the value of an option. If the option is not configured,
-        a KeyError is raised.
+        Gets the value of an option. If the option is not configured, a
+        KeyError is raised.
 
         Args:
             key (str):
-        
+
         Returns:
             object
         """
@@ -478,8 +477,7 @@ class Query:
 
     def _sub_query(self, command):
         """
-        Return a new Query of a given command, to be used as a
-        subquery.
+        Return a new Query of a given command, to be used as a subquery.
 
         Args:
             command (QueryCommands):

@@ -28,9 +28,11 @@ class Collection(Generic[T]):
     def __init_subclass__(cls, *args, **kwargs):
         """
         Hook into subclasses and set the __dtype__ attribute.
-        This is a pretty dumb implementation at the moment so it
-        should be revisited as it makes too many assumptions about the way
-        subclasses are constructed, assumptions which are NOT made in type_checking
+
+        This is a pretty dumb implementation at the moment so it should
+        be revisited as it makes too many assumptions about the way
+        subclasses are constructed, assumptions which are NOT made in
+        type_checking
         """
         cls.__dtype__ = cls.__orig_bases__[0].__args__[0]
 
