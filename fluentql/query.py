@@ -526,6 +526,37 @@ class Query:
 
         return self
 
+    def fetch(self, n_rows):
+        """
+        Limit the number of results to n_rows. The actual clause
+        depends on dialect.
+
+        Args:
+            n_rows (int): Number of rows
+        
+        Returns:
+            Query self
+        """
+        self.set_option("fetch", n_rows)
+
+        return self
+
+    def skip(self, n_rows):
+        """
+        Skip n_rows rows from the result and return the rest. The actual
+        clause depends on dialect and not all SQL implementations support
+        this.
+
+        Args:
+            n_rows (int): Number of rows
+        
+        Returns:
+            Query self
+        """
+        self.set_option("skip", n_rows)
+
+        return self
+
     def set_option(self, key, value):
         """
         Set an option by key.

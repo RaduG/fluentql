@@ -18,7 +18,8 @@ class _GenericKeywords:
 
     GROUP_BY = "group by"
     HAVING = "having"
-    LIMIT = "limit"
+    FETCH = "limit"
+    SKIP = "offset"
     ORDER_BY = "order by"
     ASCENDING = "asc"
     DESCENDING = "desc"
@@ -167,6 +168,18 @@ class GenericSQLDialect(BaseDialect):
             query_components["order_by"] = ", ".join(
                 [self.dispatch(c) for c in query._order]
             )
+
+        if query.has_option("fetch"):
+            q_template_components.append("{fetch_keyword}")
+            q_template_components.append("{fetch}")
+            query_components["fetch_keyword"] = self._get_keyword("FETCH")
+            query_components["fetch"] = self.dispatch(query.get_option("fetch"))
+
+        if query.has_option("skip"):
+            q_template_components.append("{skip_keyword}")
+            q_template_components.append("{skip}")
+            query_components["skip_keyword"] = self._get_keyword("SKIP")
+            query_components["skip"] = self.dispatch(query.get_option("skip"))
 
         query_template = " ".join(q_template_components)
 
