@@ -11,6 +11,81 @@ VarArgs = TypeVar("VarArgs")
 T = TypeVar("T")
 
 
+class WithOperatorSupport:
+    """
+    Implements operator support.
+    """
+
+    def __gt__(self, other):
+        return GreaterThan(self, other)
+
+    def __ge__(self, other):
+        return GreaterThanOrEqual(self, other)
+
+    def __lt__(self, other):
+        return LessThan(self, other)
+
+    def __le__(self, other):
+        return LessThanOrEqual(self, other)
+
+    def __eq__(self, other):
+        return Equals(self, other)
+
+    def __ne__(self, other):
+        return NotEqual(self, other)
+
+    def __add__(self, other):
+        return Add(self, other)
+
+    def __radd__(self, other):
+        return Add(other, self)
+
+    def __sub__(self, other):
+        return Subtract(self, other)
+
+    def __rsub__(self, other):
+        return Subtract(other, self)
+
+    def __mul__(self, other):
+        return Multiply(self, other)
+
+    def __rmul__(self, other):
+        return Multiply(other, self)
+
+    def __truediv__(self, other):
+        return Divide(self, other)
+
+    def __rtruediv__(self, other):
+        return Divide(other, self)
+
+    def __mod__(self, other):
+        return Modulo(self, other)
+
+    def __rmod__(self, other):
+        return Modulo(other, self)
+
+    def __and__(self, other):
+        return BitwiseAnd(self, other)
+
+    def __rand__(self, other):
+        return BitwiseAnd(other, self)
+
+    def __or__(self, other):
+        return BitwiseOr(self, other)
+
+    def __ror__(self, other):
+        return BitwiseOr(other, self)
+
+    def __xor__(self, other):
+        return BitwiseXor(self, other)
+
+    def __rxor__(self, other):
+        return BitwiseXor(other, self)
+
+    def __invert__(self):
+        return Not(self)
+
+
 class F(Referenceable):
     def __init_subclass__(cls, **kwargs):
         """
@@ -159,10 +234,13 @@ class BooleanF(F):
         return Collection[BooleanType]
 
 
-class AggregateF(F):
+class AggregateF(WithOperatorSupport, F):
     @classmethod
     def returns(cls, matched_types, type_var_mapping):
-        return type_var_mapping[Constant][1]
+        try:
+            return type_var_mapping[Constant][1]
+        except KeyError:
+            return Any
 
 
 class ComparisonF(F):
@@ -278,6 +356,10 @@ class Max(AggregateF):
 
 
 class Min(AggregateF):
+    a: Collection[Constant]
+
+
+class Sum(AggregateF):
     a: Collection[Constant]
 
 

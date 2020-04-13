@@ -18,6 +18,7 @@ class QueryCommands(Enum):
     WHERE = "where"
     ON = "on"
     JOIN = "join"
+    HAVING = "having"
 
 
 class Query:
@@ -446,6 +447,61 @@ class Query:
         self._group_by = columns
 
         return self
+
+    def having(self, condition, boolean=BitwiseAnd):
+        """
+        Having clause for a select query.
+
+        Args:
+            condition (F|Callable): 
+            boolean (F):
+
+        Returns:
+            Query self
+        """
+        if isinstance(condition, FunctionType):
+            having_subquery = self._sub_query(QueryCommands.HAVING)
+            # Inherit targets
+            having_subquery._target = list(self._target)
+
+            # Call user function, which may or may not return a Query
+            # but that doesn't matter as we expect the given query
+            # object to be mutated
+            condition(having_subquery)
+
+            condition = having_subquery._having
+
+        if self._having is None:
+            self._having = condition
+        else:
+            # Set last where clause's boolean
+            self._having = boolean(self._having, condition)
+
+        return self
+
+    def and_having(self, condition):
+        """
+        Shorthand for having(condition, boolean=BitwiseAnd)
+
+        Args:
+            condition (F|Callable):
+        
+        Returns:
+            Query self
+        """
+        return self.having(condition, BitwiseAnd)
+
+    def or_having(self, condition):
+        """
+        Shorthand for having(condition, boolean=BitwiseOr)
+
+        Args:
+            condition (F|Callable):
+        
+        Returns:
+            Query self
+        """
+        return self.having(condition, BitwiseOr)
 
     def order_by(self, *criteria):
         """

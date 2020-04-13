@@ -99,7 +99,7 @@ def apply_type_var_mapping(mapping, matched_types):
                 except AttributeError:
                     # Python 3.7+
                     base = matched_types[i].__origin__
-                
+
                 resolved_types[i] = base[resolved_type]
             else:
                 resolved_types[i] = resolved_type
@@ -434,7 +434,7 @@ def is_generic(t):
         # Python 3.7+
         try:
             if typing.Generic in t.mro():
-                return True 
+                return True
         except AttributeError:
             pass
 

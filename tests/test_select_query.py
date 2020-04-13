@@ -219,3 +219,34 @@ def test_order_by(q, expected, dialect_cls):
 def test_order_by_raises_query_builder_error(q, order_by_function):
     with pytest.raises(QueryBuilderError):
         order_by_function(q)
+
+
+@pytest.mark.parametrize(
+    ["q", "expected"],
+    [
+        (
+            Q.select()
+            .from_(test_table)
+            .group_by(test_table["col1"])
+            .having(test_table["col1"] > 100),
+            "select * from test_table group by col1 having col1 > 100;",
+        ),
+        (
+            Q.select()
+            .from_(test_table)
+            .group_by(test_table["col1"])
+            .having(test_table["col2"].sum() > 100),
+            "select * from test_table group by col1 having sum(col2) > 100;",
+        ),
+        (
+            Q.select()
+            .from_(test_table)
+            .group_by(test_table["col1"], test_table["col2"])
+            .having(test_table["col1"] != 100)
+            .and_having(test_table["col2"].like("%abc")),
+            "select * from test_table group by col1, col2 having col1 <> 100 and col2 like '%abc';",
+        ),
+    ],
+)
+def test_having(q, expected, dialect_cls):
+    assert q.compile(dialect_cls) == expected

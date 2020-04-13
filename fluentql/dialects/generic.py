@@ -154,6 +154,12 @@ class GenericSQLDialect(BaseDialect):
                 [self.dispatch(c) for c in query._group_by]
             )
 
+        if query._having is not None:
+            q_template_components.append("{having_keyword}")
+            q_template_components.append("{having}")
+            query_components["having_keyword"] = self._get_keyword("HAVING")
+            query_components["having"] = self.dispatch(query._having)
+
         if query._order is not None:
             q_template_components.append("{order_by_keyword}")
             q_template_components.append("{order_by}")
