@@ -231,6 +231,10 @@ class NotEqual(BooleanF):
     b: Union[Constant, Collection[Any]]
 
 
+class Not(BooleanF):
+    a: Union[BooleanType, Collection[BooleanType]]
+
+
 class As(F):
     a: Referenceable
     b: str

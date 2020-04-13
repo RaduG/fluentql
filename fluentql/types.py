@@ -2,36 +2,37 @@ from typing import Any
 
 from .base_types import (
     BooleanType,
-    NumberType,
-    StringType,
+    Collection,
     DateType,
     DateTimeType,
-    TimeType,
-    Collection,
+    NumberType,
     Referenceable,
+    StringType,
+    TimeType,
 )
 
 from .function import (
-    GreaterThan,
-    GreaterThanOrEqual,
-    LessThan,
-    LessThanOrEqual,
-    Equals,
-    NotEqual,
     Add,
-    Subtract,
-    Multiply,
-    Divide,
-    Modulo,
+    As,
     BitwiseAnd,
     BitwiseOr,
     BitwiseXor,
-    As,
-    TableStar,
+    Divide,
+    Equals,
+    GreaterThan,
+    GreaterThanOrEqual,
     In,
+    LessThan,
+    LessThanOrEqual,
+    Like,
     Max,
     Min,
-    Like,
+    Modulo,
+    Multiply,
+    Not,
+    NotEqual,
+    Subtract,
+    TableStar,
 )
 
 
@@ -105,6 +106,9 @@ class WithOperatorSupport:
 
     def __rxor__(self, other):
         return BitwiseXor(other, self)
+
+    def __invert__(self):
+        return Not(self)
 
 
 class Column(WithOperatorSupport, Referenceable):

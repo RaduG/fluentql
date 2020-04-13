@@ -32,19 +32,20 @@ class _GenericKeywords:
 
 class _GenericOperators:
     ADD = "+"
-    SUBTRACT = "-"
-    MULTIPLY = "*"
+    AND = "and"
     DIVIDE = "/"
-    LESS_THAN = "<"
-    LESS_THAN_OR_EQUAL = "<="
+    EQUAL = "="
     GREATER_THAN = ">"
     GREATER_THAN_OR_EQUAL = ">="
-    EQUAL = "="
-    NOT_EQUAL = "<>"
-    AND = "and"
-    OR = "or"
-    XOR = "xor"
     IN = "in"
+    LESS_THAN = "<"
+    LESS_THAN_OR_EQUAL = "<="
+    MULTIPLY = "*"
+    NOT = "not"
+    NOT_EQUAL = "<>"
+    OR = "or"
+    SUBTRACT = "-"
+    XOR = "xor"
 
 
 class _GenericSymbols:
@@ -207,6 +208,18 @@ class GenericSQLDialect(BaseDialect):
         or_keyword = self._get_operator("OR")
 
         return self.compile_infix_function(f, or_keyword)
+
+    def compile_not_function(self, f):
+        """
+        Args:
+            f (Not):
+        
+        Returns:
+            str
+        """
+        not_keyword = self._get_operator("NOT")
+
+        return f"{not_keyword} ({self.dispatch(f.__values__[0])})"
 
     def compile_infix_function(self, f, name=None):
         """
