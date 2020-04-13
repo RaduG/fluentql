@@ -134,7 +134,7 @@ class ArithmeticF(F):
         """
         constant_type = type_var_mapping[Constant][1]
 
-        if any(issubclass(t, Collection) for t in matched_types):
+        if any(Collection in t.__mro__ for t in matched_types if hasattr(t, "__mro__")):
             return Collection[constant_type]
 
         return constant_type
