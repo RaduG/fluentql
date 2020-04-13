@@ -1,4 +1,5 @@
 from enum import Enum
+from functools import wraps
 from types import FunctionType
 
 from .errors import QueryBuilderError
@@ -19,6 +20,36 @@ class QueryCommands(Enum):
     ON = "on"
     JOIN = "join"
     HAVING = "having"
+
+
+def for_query_commands(*commands):
+    """
+    Decorator for Query methods. It checks if the
+    Query instance's command is in types. If it is, it calls
+    the method; otherwise, it raises a QueryBuilderError.
+
+    Args:
+        *types (QueryCommands)
+    
+    Returns:
+        function
+    """
+
+    def decorator(meth):
+        @wraps(meth)
+        def wrapper(self, *args, **kwargs):
+            if self._command in commands:
+                return meth(self, *args, **kwargs)
+
+            commands_str = ", ".join([command.value for command in commands])
+
+            raise QueryBuilderError(
+                f"{meth.__name__} can only be used in {commands_str} queries, {self._command.value} found"
+            )
+
+        return wrapper
+
+    return decorator
 
 
 class Query:
@@ -99,6 +130,7 @@ class Query:
 
         return query
 
+    @for_query_commands(QueryCommands.SELECT, QueryCommands.DELETE)
     def from_(self, target):
         """
         Set main target for the query. The list of targets must be empty.
@@ -128,6 +160,7 @@ class Query:
         """
         return self.from_(target)
 
+    @for_query_commands(QueryCommands.SELECT, QueryCommands.WHERE, QueryCommands.DELETE)
     def where(self, condition, boolean=BitwiseAnd):
         """
         Add a where clause to a query.
@@ -209,6 +242,7 @@ class Query:
         """
         return self.where(condition, BitwiseOr)
 
+    @for_query_commands(QueryCommands.SELECT)
     def join(self, target, on, how="inner"):
         """
         Add a join clause to a query.
@@ -318,6 +352,7 @@ class Query:
         """
         return self.join(target, None, how="cross")
 
+    @for_query_commands(QueryCommands.JOIN, QueryCommands.ON)
     def on(self, condition, boolean=BitwiseAnd):
         """
         On clause for a join. Only available for ON command subqueries.
@@ -332,11 +367,6 @@ class Query:
         Returns:
             Query self
         """
-        if self._command not in (QueryCommands.JOIN, QueryCommands.ON):
-            raise QueryBuilderError(
-                ".on should be called only in JOIN or OR subqueries"
-            )
-
         if isinstance(condition, FunctionType):
             on_subquery = self._sub_query(QueryCommands.ON)
 
@@ -387,6 +417,7 @@ class Query:
         """
         return self.on(condition, boolean=BitwiseOr)
 
+    @for_query_commands(QueryCommands.JOIN)
     def using(self, column_name):
         """
         Using clause for a join. Can only be used in a Join sub-query if.
@@ -399,9 +430,6 @@ class Query:
         Returns:
             Query self
         """
-        if self._command is not QueryCommands.JOIN:
-            raise QueryBuilderError(".using can only be used on a JOIN query")
-
         if self._using is not None:
             raise QueryBuilderError(".using can only be used once for a join")
 
@@ -415,6 +443,7 @@ class Query:
 
         return self
 
+    @for_query_commands(QueryCommands.SELECT)
     def group_by(self, *columns):
         """
         Issue a Group By on a Select statement.
@@ -448,6 +477,7 @@ class Query:
 
         return self
 
+    @for_query_commands(QueryCommands.SELECT)
     def having(self, condition, boolean=BitwiseAnd):
         """
         Having clause for a select query.
@@ -503,6 +533,7 @@ class Query:
         """
         return self.having(condition, BitwiseOr)
 
+    @for_query_commands(QueryCommands.SELECT)
     def order_by(self, *criteria):
         """
         Adds an order by clause to a select statement
@@ -526,6 +557,7 @@ class Query:
 
         return self
 
+    @for_query_commands(QueryCommands.SELECT)
     def fetch(self, n_rows):
         """
         Limit the number of results to n_rows. The actual clause
@@ -541,6 +573,7 @@ class Query:
 
         return self
 
+    @for_query_commands(QueryCommands.SELECT)
     def skip(self, n_rows):
         """
         Skip n_rows rows from the result and return the rest. The actual
@@ -557,6 +590,7 @@ class Query:
 
         return self
 
+    @for_query_commands(QueryCommands.SELECT)
     def distinct(self):
         """
         Distinct clause for select statement.
