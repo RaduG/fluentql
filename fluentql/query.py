@@ -49,18 +49,25 @@ class Query:
         # Options
         self._options = {}
 
-    def compile(self, dialect_cls, **options):
+    def compile(self, dialect_cls, **user_options):
         """
         Compiles the query using a given dialect type.
 
         Args:
             dialect_cls (type): Implementation of BaseDialect
-            **options: Options to be passed to the dialect constructor
+            **user_options: Options to be passed to the dialect constructor
         
         Returns:
             str
         """
-        dialect = dialect_cls(**options)
+        # If we have more than one target, we should use absolute names for
+        # column references
+        options = {"use_absolute_names_for_columns": len(self._target) > 1}
+
+        # User options should override the settings defined here
+        dialect_options = {**options, **user_options}
+
+        dialect = dialect_cls(**dialect_options)
 
         return dialect.compile(self)
 

@@ -73,6 +73,30 @@ class BaseDialect:
         """
         return self.dispatch(query)
 
+    def _get_option(self, name):
+        """
+        Get a dialect option by name
+
+        Args:
+            name (str):
+
+        Returns:
+            object
+        """
+        return self._options[name]
+
+    def _has_option(self, name):
+        """
+        Check if a given option is set
+
+        Args:
+            name (str):
+        
+        Returns:
+            bool
+        """
+        return name in self._options
+
     def _get_keyword(self, name):
         """
         Get a keyword by name. Applies any relevant options to it.

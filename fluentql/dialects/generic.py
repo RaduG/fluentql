@@ -1,5 +1,5 @@
 from .base import BaseDialect
-from ..function import Star
+from ..function import F, Star
 from ..errors import CompilationError
 
 
@@ -28,6 +28,10 @@ class _GenericKeywords:
     CROSS_JOIN = "join"
     USING = "using"
     ON = "on"
+
+    TRUE = "true"
+    FALSE = "false"
+    NULL = "null"
 
 
 class _GenericOperators:
@@ -162,8 +166,9 @@ class GenericSQLDialect(BaseDialect):
             str
         """
         as_keyword = self._get_keyword("AS")
+        left, right = f.__values__
 
-        return self.compile_infix_function(f, as_keyword)
+        return f"{self.dispatch(left)} {as_keyword} {right}"
 
     def compile_equals_function(self, f):
         """
@@ -234,14 +239,21 @@ class GenericSQLDialect(BaseDialect):
         Returns:
             str
         """
-        values = f.__values__
+        left, right = f.__values__
 
-        left = self.dispatch(values[0])
+        left_c = self.dispatch(left)
+
         if name is None:
             name = type(f).__name__.lower()
-        right = self.dispatch(values[1])
 
-        return f"{left} {name} {right}"
+        right_c = self.dispatch(right)
+
+        # If rhs is a function and one of its args is a function,
+        # wrap it in parantheses
+        if isinstance(right, F) and any(isinstance(v, F) for v in right.__values__):
+            right_c = f"({right_c})"
+
+        return f"{left_c} {name} {right_c}"
 
     def compile_join_query(self, join):
         """
@@ -307,6 +319,33 @@ class GenericSQLDialect(BaseDialect):
         """
         quote_char = self._get_symbol("STRING_QUOTE")
         return f"{quote_char}{val}{quote_char}"
+
+    def compile_bool_constant(self, val):
+        """
+        Returns the dialect name for the boolean values
+
+        Args:
+            val (bool):
+        
+        Returns:
+            str
+        """
+        if val is True:
+            return self._get_keyword("TRUE")
+
+        return self._get_keyword("FALSE")
+
+    def compile_nonetype_constant(self, val):
+        """
+        Returns the dialect name for None (null)
+
+        Args:
+            val (NoneType):
+        
+        Returns:
+            str
+        """
+        return self._get_keyword("NULL")
 
     def compile_function(self, f):
         """
@@ -412,4 +451,12 @@ class GenericSQLDialect(BaseDialect):
         Returns:
             str
         """
+        option_name = "use_absolute_names_for_columns"
+        absolute_name = (
+            self._get_option(option_name) if self._has_option(option_name) else False
+        )
+
+        if absolute_name:
+            return f"{column.table.name}.{column.name}"
+
         return column.name
