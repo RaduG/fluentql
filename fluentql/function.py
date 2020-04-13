@@ -8,6 +8,7 @@ from .type_checking import TypeChecker
 AnyArgs = TypeVar("AnyArgs")
 NoArgs = TypeVar("NoArgs")
 VarArgs = TypeVar("VarArgs")
+T = TypeVar("T")
 
 
 class F(Referenceable):
@@ -236,9 +237,9 @@ class Not(BooleanF):
 
 
 class As(F):
-    a: Referenceable
+    a: T
     b: str
-    returns: Referenceable
+    returns: T
 
 
 class TableStar(F):
