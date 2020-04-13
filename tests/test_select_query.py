@@ -250,3 +250,27 @@ def test_order_by_raises_query_builder_error(q, order_by_function):
 )
 def test_having(q, expected, dialect_cls):
     assert q.compile(dialect_cls) == expected
+
+
+@pytest.mark.parametrize(
+    ["q", "expected"],
+    [
+        (
+            Q.select().from_(test_table).fetch(100),
+            "select * from test_table limit 100;",
+        ),
+        (Q.select().from_(test_table).skip(50), "select * from test_table offset 50;",),
+        (
+            Q.select().from_(test_table).fetch(100).skip(50),
+            "select * from test_table limit 100 offset 50;",
+        ),
+    ],
+)
+def test_fetch_and_skip(q, expected, dialect_cls):
+    assert q.compile(dialect_cls) == expected
+
+
+def test_distinct(dialect_cls):
+    q = Q.select().from_(test_table).distinct()
+    expected = "select distinct * from test_table;"
+    assert q.compile(dialect_cls) == expected

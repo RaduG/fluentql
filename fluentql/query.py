@@ -557,6 +557,17 @@ class Query:
 
         return self
 
+    def distinct(self):
+        """
+        Distinct clause for select statement.
+
+        Returns:
+            Query self
+        """
+        self.set_option("distinct", True)
+
+        return self
+
     def set_option(self, key, value):
         """
         Set an option by key.

@@ -15,6 +15,7 @@ class _GenericKeywords:
     AS = "as"
     WHERE = "where"
     STAR = "*"
+    DISTINCT = "distinct"
 
     GROUP_BY = "group by"
     HAVING = "having"
@@ -118,7 +119,14 @@ class GenericSQLDialect(BaseDialect):
         q_template_components = ["{select}", "{targets}", "{from_}"]
 
         query_components = {}
-        query_components["select"] = self._get_keyword("SELECT")
+
+        select_keyword = self._get_keyword("SELECT")
+
+        if query.has_option("distinct"):
+            distinct_keyword = self._get_keyword("DISTINCT")
+            query_components["select"] = f"{select_keyword} {distinct_keyword}"
+        else:
+            query_components["select"] = select_keyword
 
         if type(query._select) is Star:
             query_components["targets"] = self.dispatch(query._select)
