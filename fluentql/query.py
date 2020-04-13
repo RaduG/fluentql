@@ -20,27 +20,6 @@ class QueryCommands(Enum):
     JOIN = "join"
 
 
-class Operators:
-    EQ = "="
-    LT = "<"
-    GT = ">"
-    LE = "<="
-    GE = ">="
-    NE = "<>"
-    NSEQ = "<=>"
-    LIKE = "like"
-    LIKE_BIN = "like binary"
-    NOT_LIKE = "not like"
-    ILIKE = "ilike"
-    BIN_AND = "&"
-    BIN_OR = "|"
-    BIN_XOR = "^"
-    RLIKE = "rlike"
-    NOT_RLIKE = "not rlike"
-    REGEXP = "regexp"
-    NOT_REGEXP = "not regexp"
-
-
 class Query:
     def __init__(self, command):
         """
@@ -69,6 +48,21 @@ class Query:
 
         # Options
         self._options = {}
+
+    def compile(self, dialect_cls, **options):
+        """
+        Compiles the query using a given dialect type.
+
+        Args:
+            dialect_cls (type): Implementation of BaseDialect
+            **options: Options to be passed to the dialect constructor
+        
+        Returns:
+            str
+        """
+        dialect = dialect_cls(**options)
+
+        return dialect.compile(self)
 
     @classmethod
     def select(cls, *columns):
