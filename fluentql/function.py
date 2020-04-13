@@ -153,7 +153,7 @@ class BooleanF(F):
         Returns:
             type
         """
-        if any(issubclass(t, Collection) for t in matched_types):
+        if any(Collection in t.__mro__ for t in matched_types if hasattr(t, "__mro__")):
             return Collection[BooleanType]
 
         return Collection[BooleanType]

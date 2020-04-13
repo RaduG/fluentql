@@ -94,7 +94,12 @@ def apply_type_var_mapping(mapping, matched_types):
     for type_var, (indices, resolved_type) in mapping.items():
         for i in indices:
             if is_generic(matched_types[i]):
-                base = matched_types[i].__base__
+                try:
+                    base = matched_types[i].__base__
+                except AttributeError:
+                    # Python 3.7+
+                    base = matched_types[i].__origin__
+                
                 resolved_types[i] = base[resolved_type]
             else:
                 resolved_types[i] = resolved_type
@@ -333,7 +338,7 @@ def get_generic_properties(t):
     of a Generic instance in the mro, from right to left.
 
     Args:
-        t (type)
+        t (type):
 
     Returns:
         tuple(type, tuple(*type)), where the first
@@ -421,18 +426,17 @@ def is_generic(t):
     Returns:
         bool
     """
-    # Python 3.7
-    if hasattr(typing, "_GenericAlias"):
-        if isinstance(t, typing._GenericAlias):
-            return True
-        if isinstance(t, typing._SpecialForm):
-            return t not in (typing.Any,)
-
-        return False
-    else:
-        # Python 3.6, 3.5
+    # Python 3.6, 3.5
+    if hasattr(typing, "GenericMeta"):
         if isinstance(t, typing.GenericMeta):
             return True
+    else:
+        # Python 3.7+
+        try:
+            if typing.Generic in t.mro():
+                return True 
+        except AttributeError:
+            pass
 
     return False
 
