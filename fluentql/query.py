@@ -130,6 +130,18 @@ class Query:
 
         return query
 
+    @classmethod
+    def delete(cls):
+        """
+        Initialise a delete query.
+
+        Returns:
+            Query instance
+        """
+        query = cls(QueryCommands.DELETE)
+
+        return query
+
     @for_query_commands(QueryCommands.SELECT, QueryCommands.DELETE)
     def from_(self, target):
         """

@@ -11,6 +11,7 @@ class _GenericNames:
 
 class _GenericKeywords:
     SELECT = "select"
+    DELETE = "delete"
     FROM = "from"
     AS = "as"
     WHERE = "where"
@@ -188,6 +189,39 @@ class GenericSQLDialect(BaseDialect):
             q_template_components.append("{skip}")
             query_components["skip_keyword"] = self._get_keyword("SKIP")
             query_components["skip"] = self.dispatch(query.get_option("skip"))
+
+        query_template = " ".join(q_template_components)
+
+        return query_template.format(**query_components)
+
+    def compile_delete_query(self, query):
+        """
+        Compiles a delete query
+
+        Args:
+            query (Query):
+        
+        Returns:
+            str
+        """
+        # If there is no target for the delete query, need to raise an error
+        if query._target is None or len(query._target) == 0:
+            raise CompilationError("Delete query must have a target")
+
+        q_template_components = ["{delete}", "{from_}"]
+
+        query_components = {}
+
+        query_components["delete"] = self._get_keyword("DELETE")
+        query_components[
+            "from_"
+        ] = f"{self._get_keyword('FROM')} {self.dispatch(query._target[0])}"
+
+        if query._where is not None:
+            q_template_components.append("{where_keyword}")
+            q_template_components.append("{where}")
+            query_components["where_keyword"] = self._get_keyword("WHERE")
+            query_components["where"] = self.dispatch(query._where)
 
         query_template = " ".join(q_template_components)
 
