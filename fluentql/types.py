@@ -14,9 +14,11 @@ from .base_types import (
 from .function import (
     Add,
     As,
+    Asc,
     BitwiseAnd,
     BitwiseOr,
     BitwiseXor,
+    Desc,
     Divide,
     Equals,
     GreaterThan,
@@ -159,11 +161,29 @@ class Column(WithOperatorSupport, Referenceable):
             bool
         """
         return (
-            isinstance(other, type(self))
+            type(other) == type(self)
             and other.table is self.table
+            and other.type is self.type
             and other.name == self.name
-            and other.type == self.type
         )
+
+    def asc(self):
+        """
+        Shorthand for Asc(self)
+
+        Returns:
+            Asc
+        """
+        return Asc(self)
+
+    def desc(self):
+        """
+        Shorthand for Desc(self)
+
+        Returns:
+            Desc
+        """
+        return Desc(self)
 
     @property
     def is_aliased(self):
@@ -313,6 +333,17 @@ class Table(Referenceable):
             return self.name
 
         return f"{self.db}.{self.name}"
+
+    @property
+    def is_types(self):
+        return self.__columns__ is not None
+
+    @property
+    def columns(self):
+        if self.__columns__ is not None:
+            return dict(self.__columns__)
+
+        return None
 
     def __getitem__(self, name):
         """

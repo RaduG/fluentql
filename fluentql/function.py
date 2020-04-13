@@ -159,7 +159,17 @@ class BooleanF(F):
         return Collection[BooleanType]
 
 
+class AggregateF(F):
+    @classmethod
+    def returns(cls, matched_types, type_var_mapping):
+        return type_var_mapping[Constant][1]
+
+
 class ComparisonF(F):
+    pass
+
+
+class OrderF(F):
     pass
 
 
@@ -263,17 +273,21 @@ class In(BooleanF):
     b: Any
 
 
-class Max(F):
+class Max(AggregateF):
     a: Collection[Constant]
 
-    @classmethod
-    def returns(cls, matched_types, type_var_mapping):
-        return type_var_mapping[Constant][1]
 
-
-class Min(F):
+class Min(AggregateF):
     a: Collection[Constant]
 
-    @classmethod
-    def returns(cls, matched_types, type_var_mapping):
-        return type_var_mapping[Constant][1]
+
+class Asc(OrderF):
+    a: Collection[Any]
+
+    returns: Collection[Any]
+
+
+class Desc(OrderF):
+    a: Collection[Any]
+
+    returns: Collection[Any]

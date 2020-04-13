@@ -137,3 +137,85 @@ def test_compound_where_query(q, expected, dialect_cls):
 )
 def test_complex_where_query(q, expected, dialect_cls):
     assert q.compile(dialect_cls) == expected
+
+
+@pytest.mark.parametrize(
+    ["q", "expected"],
+    [
+        (
+            Q.select().from_(test_table).group_by(test_table["col1"]),
+            "select * from test_table group by col1;",
+        ),
+        (
+            Q.select()
+            .from_(test_table)
+            .group_by(test_table["col1"], test_table["col2"]),
+            "select * from test_table group by col1, col2;",
+        ),
+    ],
+)
+def test_group_by(q, expected, dialect_cls):
+    assert q.compile(dialect_cls) == expected
+
+
+@pytest.mark.xfail
+@pytest.mark.parametrize(
+    ["q", "group_by_function"],
+    [
+        (Q.select().from_(test_table), lambda q: q.group_by(test_table["col1"])),
+        (
+            Q.select().from_(test_table),
+            lambda q: q.group_by(test_table["col1"], test_table["col2"]),
+        ),
+        (
+            Q.select(test_table["col1"]).from_(test_table),
+            lambda q: q.groupby(test_table["col2"]),
+        ),
+        (
+            Q.select(test_table["col1"]).from_(test_table),
+            lambda q: q.groupby(test_table["col1"], test_table["col2"]),
+        ),
+    ],
+)
+def test_group_by_raises_query_builder_error(q, group_by_function):
+    with pytest.raises(QueryBuilderError):
+        group_by_function(q)
+
+
+@pytest.mark.parametrize(
+    ["q", "expected"],
+    [
+        (
+            Q.select().from_(test_table).order_by(test_table["col1"].asc()),
+            "select * from test_table order by col1 asc;",
+        ),
+        (
+            Q.select().from_(test_table).order_by(test_table["col1"]),
+            "select * from test_table order by col1 asc;",
+        ),
+        (
+            Q.select().from_(test_table).order_by(test_table["col1"].desc()),
+            "select * from test_table order by col1 desc;",
+        ),
+        (
+            Q.select()
+            .from_(test_table)
+            .order_by(test_table["col1"], test_table["col2"]),
+            "select * from test_table order by col1 asc, col2 asc;",
+        ),
+    ],
+)
+def test_order_by(q, expected, dialect_cls):
+    assert q.compile(dialect_cls) == expected
+
+
+@pytest.mark.parametrize(
+    ["q", "order_by_function"],
+    [
+        (Q.select().from_(test_table), lambda q: q.order_by("col1")),
+        (Q.select().from_(test_table), lambda q: q.order_by(test_table["col1"] + 20)),
+    ],
+)
+def test_order_by_raises_query_builder_error(q, order_by_function):
+    with pytest.raises(QueryBuilderError):
+        order_by_function(q)

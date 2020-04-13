@@ -2,7 +2,7 @@ from enum import Enum
 from types import FunctionType
 
 from .errors import QueryBuilderError
-from .function import F, BitwiseAnd, BitwiseOr, Star
+from .function import F, OrderF, Asc, BitwiseAnd, BitwiseOr, Star
 from .types import Column
 
 
@@ -94,7 +94,7 @@ class Query:
         if len(columns):
             query._select = columns
         else:
-            query._select = Star()
+            query._select = [Star()]
 
         return query
 
@@ -435,8 +435,38 @@ class Query:
         if not all(isinstance(column, Column) for column in columns):
             raise QueryBuilderError("group_by can only be used on Columns")
 
+        # TODO: If a group by clause is set, then the selected columns must either be
+        # in the group by list, or aggregated. We must check the select list for
+        # target columns, as well as the list of target tables.
+        # Star() and TableStar() make it a bit more complicated, as for untyped
+        # tables we don't really know what's in them. Therefore, for untyped tables,
+        # if there is potential for the validation to fail, we raise a warning, whereas
+        # for types tables we raise an Error
+
         self._group_by = columns
-        # TODO: Check columns actually exist
+
+        return self
+
+    def order_by(self, *criteria):
+        """
+        Adds an order by clause to a select statement
+
+        Args:
+            criteria (tuple(Column|OrderF)): Criteria to apply. If
+                a Column is passed, ascending order is assumed.
+        
+        Returns:
+            Query self
+        """
+        if self._command is not QueryCommands.SELECT:
+            raise QueryBuilderError("order_by can only be used with select statements")
+
+        if any(not isinstance(c, (Column, OrderF)) for c in criteria):
+            raise QueryBuilderError(
+                "Only Column or OrderF objects should be passed to sort()"
+            )
+
+        self._order = [Asc(c) if isinstance(c, Column) else c for c in criteria]
 
         return self
 

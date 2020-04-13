@@ -19,6 +19,9 @@ class _GenericKeywords:
     GROUP_BY = "group by"
     HAVING = "having"
     LIMIT = "limit"
+    ORDER_BY = "order by"
+    ASCENDING = "asc"
+    DESCENDING = "desc"
 
     JOIN = "join"
     LEFT_JOIN = "left join"
@@ -150,6 +153,15 @@ class GenericSQLDialect(BaseDialect):
             query_components["group_by"] = ", ".join(
                 [self.dispatch(c) for c in query._group_by]
             )
+
+        if query._order is not None:
+            q_template_components.append("{order_by_keyword}")
+            q_template_components.append("{order_by}")
+            query_components["order_by_keyword"] = self._get_keyword("ORDER_BY")
+            query_components["order_by"] = ", ".join(
+                [self.dispatch(c) for c in query._order]
+            )
+
         query_template = " ".join(q_template_components)
 
         return query_template.format(**query_components)
@@ -430,6 +442,34 @@ class GenericSQLDialect(BaseDialect):
         right = self.dispatch(values[1])
 
         return f"{left} {name} ({right})"
+
+    def compile_asc_function(self, f):
+        """
+        Args:
+            f (Asc):
+
+        Returns:
+            str
+        """
+        value = f.__values__[0]
+
+        asc_keyword = self._get_keyword("ASCENDING")
+
+        return f"{self.dispatch(value)} {asc_keyword}"
+
+    def compile_desc_function(self, f):
+        """
+        Args:
+            f (Desc):
+
+        Returns:
+            str
+        """
+        value = f.__values__[0]
+
+        desc_keyword = self._get_keyword("DESCENDING")
+
+        return f"{self.dispatch(value)} {desc_keyword}"
 
     def compile_table_reference(self, table):
         """
