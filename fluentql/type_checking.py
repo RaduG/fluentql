@@ -347,7 +347,7 @@ def get_generic_properties(t):
     """
     bases = t.__orig_bases__
 
-    for base in reversed(bases):
+    for base in [t, *reversed(bases)]:
         if is_generic(base) and base.__args__ is not None:
             break
     else:
