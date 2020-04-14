@@ -10,7 +10,7 @@ with open(os.path.join(this_directory, "README.md"), "r") as f:
 setup(
     name="fluentql",
     packages=["fluentql"],
-    version="0.1.0",
+    version="0.1.1",
     license="MIT",
     description="Lightweight and intuitive Python SQL query builder.",
     long_description=long_description,
