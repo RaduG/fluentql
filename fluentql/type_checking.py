@@ -35,9 +35,8 @@ class TypeChecker:
             type_match = get_type_match(given, expected)
 
             if type_match is None:
-                raise TypeError(
-                    f"Invalid type for argument {index}: expected {expected}, found {given}."
-                )
+                msg = f"Invalid type for argument {index}: expected {expected}, found {given}."
+                raise TypeError(msg)
 
             matched_types.append(type_match)
 
@@ -48,9 +47,8 @@ class TypeChecker:
         for type_var, (indices, resolved_type) in self._type_var_mapping.items():
             if resolved_type is None:
                 given_types = [self._given[i] for i in indices]
-                raise TypeError(
-                    f"Invalid types supplied for TypeVar {type_var} for arguments {indices}: expected one of {type_var.__constraints__}, found {given_types}"
-                )
+                msg = f"Invalid types supplied for TypeVar {type_var} for arguments {indices}: expected one of {type_var.__constraints__}, found {given_types}"
+                raise TypeError(msg)
 
         # Resolve TypeVars using the map
         final_types = apply_type_var_mapping(self._type_var_mapping, matched_types)
@@ -348,7 +346,7 @@ def get_generic_properties(t):
     bases = t.__orig_bases__
 
     for base in [t, *reversed(bases)]:
-        if is_generic(base) and base.__args__ is not None:
+        if is_generic(base) and getattr(base, "__args__", None) is not None:
             break
     else:
         raise TypeError(f"Type {t} is not a subclass of Generic")
