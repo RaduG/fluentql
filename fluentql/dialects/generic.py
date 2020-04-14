@@ -7,6 +7,7 @@ class _GenericNames:
     MAX = "max"
     MIN = "min"
     LIKE = "like"
+    SUM = "sum"
 
 
 class _GenericKeywords:
@@ -50,6 +51,7 @@ class _GenericOperators:
     IN = "in"
     LESS_THAN = "<"
     LESS_THAN_OR_EQUAL = "<="
+    MODULO = "%"
     MULTIPLY = "*"
     NOT = "not"
     NOT_EQUAL = "<>"
@@ -227,77 +229,6 @@ class GenericSQLDialect(BaseDialect):
 
         return query_template.format(**query_components)
 
-    def compile_as_function(self, f):
-        """
-        Compiles as: dispatch(values[0]) AS dispatch(values[1])
-
-        Args:
-            f (As):
-
-        Returns:
-            str
-        """
-        as_keyword = self._get_keyword("AS")
-        left, right = f.__values__
-
-        return f"{self.dispatch(left)} {as_keyword} {right}"
-
-    def compile_equals_function(self, f):
-        """
-        Args:
-            f (Equals):
-        
-        Returns:
-            str
-        """
-        return self.compile_infix_function(f, self._get_operator("EQUAL"))
-
-    def compile_greaterthan_function(self, f):
-        """
-        Args:
-            f (Equals):
-        
-        Returns:
-            str
-        """
-        return self.compile_infix_function(f, self._get_operator("GREATER_THAN"))
-
-    def compile_bitwiseand_function(self, f):
-        """
-        Args:
-            f (BitwiseAnd):
-        
-        Returns:
-            str
-        """
-        and_keyword = self._get_operator("AND")
-
-        return self.compile_infix_function(f, and_keyword)
-
-    def compile_bitwiseor_function(self, f):
-        """
-        Args:
-            f (BitwiseOr):
-        
-        Returns:
-            str
-        """
-        or_keyword = self._get_operator("OR")
-
-        return self.compile_infix_function(f, or_keyword)
-
-    def compile_not_function(self, f):
-        """
-        Args:
-            f (Not):
-        
-        Returns:
-            str
-        """
-        not_keyword = self._get_operator("NOT")
-
-        return f"{not_keyword} ({self.dispatch(f.__values__[0])})"
-
     def compile_infix_function(self, f, name=None):
         """
         Compiles a function with 2 arguments as: dispatch(values[0]) NAME
@@ -418,22 +349,112 @@ class GenericSQLDialect(BaseDialect):
         """
         return self._get_keyword("NULL")
 
-    def compile_function(self, f):
+    def compile_function(self, f, name=None):
         """
         Last resort compile method for functions.
 
         Args:
             function (F):
-
+            name (str):
         Returns:
             str
         """
-        function_name = type(f).__name__.lower()
+        name = name or type(f).__name__.lower()
         values = f.__values__
 
         compiled_values = f", ".join([self.dispatch(v) for v in values])
 
-        return f"{function_name}({compiled_values})"
+        return f"{name}({compiled_values})"
+
+    def compile_add_function(self, f):
+        """
+        Args:
+            f (Add):
+        
+        Returns:
+            str
+        """
+        return self.compile_infix_function(f, self._get_operator("ADD"))
+
+    def compile_subtract_function(self, f):
+        """
+        Args:
+            f (Subtract):
+        
+        Returns:
+            str
+        """
+        return self.compile_infix_function(f, self._get_operator("SUBTRACT"))
+
+    def compile_multiply_function(self, f):
+        """
+        Args:
+            f (Multiply):
+        
+        Returns:
+            str
+        """
+        return self.compile_infix_function(f, self._get_operator("MULTIPLY"))
+
+    def compile_divide_function(self, f):
+        """
+        Args:
+            f (Divide):
+        
+        Returns:
+            str
+        """
+        return self.compile_infix_function(f, self._get_operator("DIVIDE"))
+
+    def compile_modulo_function(self, f):
+        """
+        Args:
+            f (Modulo):
+        
+        Returns:
+            str
+        """
+        return self.compile_infix_function(f, self._get_operator("MODULO"))
+
+    def compile_bitwiseand_function(self, f):
+        """
+        Args:
+            f (BitwiseAnd):
+        
+        Returns:
+            str
+        """
+        return self.compile_infix_function(f, self._get_operator("AND"))
+
+    def compile_bitwiseor_function(self, f):
+        """
+        Args:
+            f (BitwiseOr):
+        
+        Returns:
+            str
+        """
+        return self.compile_infix_function(f, self._get_operator("OR"))
+
+    def compile_bitwisexor_function(self, f):
+        """
+        Args:
+            f (BitwiseXor):
+        
+        Returns:
+            str
+        """
+        return self.compile_infix_function(f, self._get_operator("XOR"))
+
+    def compile_equals_function(self, f):
+        """
+        Args:
+            f (Equals):
+        
+        Returns:
+            str
+        """
+        return self.compile_infix_function(f, self._get_operator("EQUAL"))
 
     def compile_notequal_function(self, f):
         """
@@ -455,15 +476,64 @@ class GenericSQLDialect(BaseDialect):
         """
         return self.compile_infix_function(f, self._get_operator("LESS_THAN"))
 
-    def compile_like_function(self, f):
+    def compile_lessthanorequal_function(self, f):
         """
         Args:
-            f (Like):
+            f (LessThanOrEqual):
         
         Returns:
             str
         """
-        return self.compile_infix_function(f, self._get_name("LIKE"))
+        return self.compile_infix_function(f, self._get_operator("LESS_THAN_OR_EQUAL"))
+
+    def compile_greaterthan_function(self, f):
+        """
+        Args:
+            f (GreaterThan):
+        
+        Returns:
+            str
+        """
+        return self.compile_infix_function(f, self._get_operator("GREATER_THAN"))
+
+    def compile_greaterthanorequal_function(self, f):
+        """
+        Args:
+            f (GreaterThanOrEqual):
+        
+        Returns:
+            str
+        """
+        return self.compile_infix_function(
+            f, self._get_operator("GREATER_THAN_OR_EQUAL")
+        )
+
+    def compile_not_function(self, f):
+        """
+        Args:
+            f (Not):
+        
+        Returns:
+            str
+        """
+        not_keyword = self._get_operator("NOT")
+
+        return f"{not_keyword} ({self.dispatch(f.__values__[0])})"
+
+    def compile_as_function(self, f):
+        """
+        Compiles as: dispatch(values[0]) AS dispatch(values[1])
+
+        Args:
+            f (As):
+
+        Returns:
+            str
+        """
+        as_keyword = self._get_keyword("AS")
+        left, right = f.__values__
+
+        return f"{self.dispatch(left)} {as_keyword} {right}"
 
     def compile_tablestar_function(self, f):
         """
@@ -488,6 +558,16 @@ class GenericSQLDialect(BaseDialect):
         """
         return self._get_keyword("STAR")
 
+    def compile_like_function(self, f):
+        """
+        Args:
+            f (Like):
+        
+        Returns:
+            str
+        """
+        return self.compile_infix_function(f, self._get_name("LIKE"))
+
     def compile_in_function(self, f):
         """
         Args:
@@ -503,6 +583,36 @@ class GenericSQLDialect(BaseDialect):
         right = self.dispatch(values[1])
 
         return f"{left} {name} ({right})"
+
+    def compile_max_function(self, f):
+        """
+        Args:
+            f (Max):
+        
+        Returns:
+            str
+        """
+        return self.compile_function(f, self._get_name("MAX"))
+
+    def compile_min_function(self, f):
+        """
+        Args:
+            f (Min):
+        
+        Returns:
+            str
+        """
+        return self.compile_function(f, self._get_name("MIN"))
+
+    def compile_sum_function(self, f):
+        """
+        Args:
+            f (Sum):
+        
+        Returns:
+            str
+        """
+        return self.compile_function(f, self._get_name("SUM"))
 
     def compile_asc_function(self, f):
         """
