@@ -194,7 +194,7 @@ class F(Referenceable):
         self.__type_checker__.validate()
 
 
-class ArithmeticF(F):
+class ArithmeticF(WithOperatorSupport, F):
     @classmethod
     def returns(cls, matched_types, type_var_mapping):
         """
