@@ -2,9 +2,9 @@
 
 **FLUENTQL IS WORK IN PROGRESS. WHILE IT IS AVAILABLE ON PYPI, USE IT WITH CAUTION. PUBLIC APIS MAY CHANGE UNEXPECTEDLY WHILE FEATURES ARE ADDED AT PACE.**
 
-|                                            Build                                             |                                                                          Coverage                                                                          | Release |
-| :------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------: | :-----: |
-| ![Build#develop](https://github.com/RaduG/fluentql/workflows/build/badge.svg?branch=develop) | [![Coverage Status](https://coveralls.io/repos/github/RaduG/fluentql/badge.svg?branch=develop)](https://coveralls.io/github/RaduG/fluentql?branch=develop) |   N/A   |
+|                                            Build                                             |                                                                          Coverage                                                                          |                      Release                      |
+| :------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------: | :-----------------------------------------------: |
+| ![Build#develop](https://github.com/RaduG/fluentql/workflows/build/badge.svg?branch=develop) | [![Coverage Status](https://coveralls.io/repos/github/RaduG/fluentql/badge.svg?branch=develop)](https://coveralls.io/github/RaduG/fluentql?branch=develop) | ![Release](https://badge.fury.io/py/fluentql.svg) |
 
 ## Introduction
 
@@ -268,4 +268,174 @@ a4 = Add(nc1, "abc") # TypeError: T was not matched
 ```
     
 
-*more coming soon*
+Where are functions used? All operators are implemented as functions (Add, Subtract, Multiply, Divide, Modulo, BitwiseAnd etc). As well as that, any SQL functions (such as Max, Min, Count) should be implemented as subclasses of F.
+
+List of all included functions (in ```fluentql.function```):
+* Add
+* Subtract
+* Multiply
+* Divide
+* Modulo
+* BitwiseOr
+* BitwiseAnd
+* BitwiseXor
+* Equals
+* LessThan
+* LessThanOrEqual
+* GreaterThan
+* GreaterThanOrEqual
+* NotEqual
+* Not
+* As (used for aliases)
+* TableStar
+* Star
+* Like
+* In
+* Max
+* Min
+* Sum
+* Asc
+* Desc
+
+```Column``` objects also come with a comprehensive implementation of the Data Model to facilitate a simpler, more expressive syntax:
+
+```python
+col1 = NumberColumn("col1")
+col2 = NumberColumn("col2")
+
+col1 + col2 # Returns Add(col1, col2)
+col1 - col2 # Returns Subtract(col1, col2)
+col1 == col2 # Returns Equals(col1, col2)
+col1 < col2 # Returns LessThan(col1, col2)
+
+# Also
+col1.max() # Returns Max(col1)
+col1.isin(col2) # Returns In(col1, col2)
+col1.asc() # Returns Asc(col1)
+```
+and more.
+
+### Query
+The ```fluentql.query.Query``` or, simpler, ```fluentql.Q``` class is what users will mostly interact with - it is the interface to the query builder itself.
+
+Each instance of ```Q``` has a ```_command``` attribute, which is a value of ```QueryCommands```. The possible commands are:
+* SELECT
+* INSERT
+* UPDATE
+* DELETE
+* CREATE
+* DROP
+* WHERE
+* ON
+* JOIN
+* HAVING
+
+The first half of them are matches for actual SQL statements, while the last ones are synthetic sub-query types that are used as containers in certain circumstances.
+
+There are two main ideas to bear in mind:
+* Each core method of ```Q``` is only set to execute for a particular set of QueryCommands (e.g. ```where()``` will only work for ```SELECT``` and ```DELETE``` statements)
+* Each statement is initialised through a classmethod which returns an instance of ```Q```: ```Q.select()``` returns a ```Q``` with ```_command = QueryCommands.SELECT``` and so on.
+
+
+#### SELECT
+
+##### Basic use
+```python
+Q.select().set_from(table) # select * from table;
+Q.select(table["col1"]).from_(table) # select col1 from table; -- note that Q.set_from is an alias for Q.from_
+```
+Calling ```select``` with no arguments returns a ```select *```.
+
+##### Where
+
+```python
+# select * from table where col1 < col2;
+Q.select().set_from(table).where(table["col1"] < table["col2"])
+ 
+ # select * from table where col1 > col2 or (col3 like '%abc' and col4 <> 'XYZ')
+Q.select().set_from(table).where(table["col1"] > table["col2"]).or_where(lambda q: q.where(table["col3"].like("%abc")).and_where(table["col4"] != "XYZ"))
+```
+Pass a lambda function to ```where```, ```and_where``` or ```or_where``` to *nest* conditions.
+
+##### Join
+```python
+# select * from table inner join table2 on table.col1 = table2.col3;
+Q.select().set_from(table).inner_join(table2, lambda q: q.on(table["col1"] == table2["col3"]))
+
+# select * from table left join table2 on table.col1 = table2.col3 and (table.col1 % 2 = 0);
+Q.select().set_from(table).left_join(table2, lambda q: q.on(table["col1"] == table2["col3"]).and_on(table["col1"] % 2 = 0))
+
+# select * from table right join table2 using ('id');
+Q.select().set_from(table).right_join(table2, lambda q: q.using("id"))
+```
+Available join methods:
+* ```inner_join```
+* ```outer_join```
+* ```left_join```
+* ```right_join```
+* ```cross_join```
+
+
+##### Group By
+```python
+# select col1 from table group by col1;
+Q.select(table["col1"]).set_from(table).group_by(table["col1"])
+
+# select col2, col3, max(col1) from table group by col2, col3;
+Q.select(table["col2"], table["col3"], table["col1"].max()).set_from(table).group_by(table["col2"], table["col3"])
+```
+
+##### Having
+```python
+# select col1 from table group by col1 having col1 < 20 and (col1 % 2 = 1);
+Q.select(table["col1"]).set_from(table).group_by(table["col1"]).having(table["col1"] < 20).and_having(table["col1"] % 2 == 1)
+```
+```having```, ```and_having```, ```or_having``` methods work in a similar way to ```where``` methods, in that they can also take a ```lambda``` as argument to nest conditions.
+
+
+##### Order By
+```python
+# select * from table order by col1 asc;
+Q.select().set_from(table).order_by(table["col1"]) # if not specified, Ascending order is assumed
+# equivalent to
+Q.select().set_from(table).order_by(table["col1"].asc())
+
+# select * from table order by col1 asc, col2 desc;
+Q.select().set_from(table).order_by(table["col1"], table["col2"].desc())
+```
+Use ```Column.asc``` and ```Column.desc``` to mark ordering in an order_by clause.
+
+
+##### Fetch and Skip
+```python
+# select * from table limit 100;
+Q.select().set_from(table).fetch(100)
+
+# select * from table offset 30;
+Q.select().set_from(table).skip(30)
+
+# select * from table limit 100 offset 30;
+Q.select().set_from(table).fetch(100).skip(30)
+```
+
+
+#### Delete
+
+Delete queries may only have where clauses:
+```python
+# delete from table;
+Q.delete().set_from(table)
+
+# delete from table where col1 = 'val';
+Q.delete().set_from(table).where(table["col1"] == "val")
+```
+
+#### Insert
+*Coming soon*
+
+#### Create
+*Coming soon*
+
+#### Drop
+*Coming soon*
+
